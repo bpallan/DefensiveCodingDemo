@@ -11,15 +11,27 @@ namespace DefensiveCoding.Api.Controllers
     [ApiController]
     public class DemoController : ControllerBase
     {
-        // GET api/values
+        private static int _slowCount = 0;
+        private static int _errorCount = 0;
+        private static int _timeoutCount = 0;
+
+        [HttpPost]
+        [Route("reset")]
+        public ActionResult Reset()
+        {
+            _slowCount = 0;
+            _errorCount = 0;
+            _timeoutCount = 0;
+
+            return Ok();
+        }
+
         [HttpGet]
         [Route("success")]
         public ActionResult<string> Success()
         {
             return "Success!";
-        }
-
-        private static int _slowCount = 0;
+        }       
 
         [HttpGet]
         [Route("slow")]
@@ -50,9 +62,7 @@ namespace DefensiveCoding.Api.Controllers
             {
                 return Unauthorized();
             }
-        }
-
-        private static int _errorCount = 0;
+        }        
 
         [HttpGet]
         [Route("error")]
@@ -69,9 +79,7 @@ namespace DefensiveCoding.Api.Controllers
             }
 
             return "Success!";
-        }
-
-        private static int _timeoutCount = 0;
+        }        
 
         [HttpGet]
         [Route("timeout")]
@@ -89,6 +97,6 @@ namespace DefensiveCoding.Api.Controllers
             }
 
             return "Success!";
-        }       
+        }        
     }
 }
