@@ -18,7 +18,7 @@ namespace DefensiveCoding.Demos.Http.DotNetFramework
     {
         private TestServer _testServer;
         private HttpClient _httpClient;
-        private Task _host;
+        private Task _host;       
 
         public RetryDemos()
         {
@@ -34,21 +34,14 @@ namespace DefensiveCoding.Demos.Http.DotNetFramework
                     .UseStartup<Startup>());
             _httpClient = _testServer.CreateClient();
 
-            var configuration =
-                new ConfigurationBuilder()
-                    .AddInMemoryCollection(new Dictionary<string, string>
-                    {
-                        ["urls"] = "http://localhost:5000"
-                    })
-                    .Build();
 
-            var webHost = WebHost.CreateDefaultBuilder(null)
-                .UseKestrel()                
-                //.UseConfiguration(configuration)
-                .UseUrls("http://localhost:5001")
-                .UseStartup<Startup>()
-                .Build();
-            _host = webHost.StartAsync();
+            //var webHost = WebHost.CreateDefaultBuilder(null)
+            //    .UseKestrel()                
+            //    //.UseConfiguration(configuration)
+            //    .UseUrls("http://localhost:5001")
+            //    .UseStartup<Startup>()
+            //    .Build();
+            //_host = webHost.StartAsync();
         }
 
         [TestMethod]
