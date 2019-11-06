@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -64,19 +65,53 @@ namespace DefensiveCoding.Demos._03_Retry
             Assert.IsTrue(response.IsSuccessStatusCode);
         }
 
-        public void WaitAndRetry()
+        [TestMethod]
+        public async Task WaitAndRetry()
         {
+            var policy = HttpPolicyExtensions.HandleTransientHttpError().WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromSeconds(5));
 
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            var result = await policy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
+
+            Assert.IsTrue(sw.ElapsedMilliseconds > 4900); // verify there was a delay before retry
+            Assert.IsTrue(result.IsSuccessStatusCode);
         }
 
-        public void WaitAndRetryWithBackoff()
+        [TestMethod]
+        public async Task WaitAndRetryWithBackoff()
         {
+            var policy = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                // 1 seconds, 2 seconds, 4 seconds, etc...
+                .WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)/2));
 
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            var result = await policy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=2"));
+
+            Assert.IsTrue(sw.ElapsedMilliseconds > 2900); // verify there was a delay before retry
+            Assert.IsTrue(result.IsSuccessStatusCode);
         }
 
-        public void HttpRequest_FailsIfBuiltOutsideRetry()
+        [TestMethod]
+        public async Task HttpRequest_WhenBuiltOutsideOfExecute_ThrowsInvalidOperationException()
         {
+            var policy = HttpPolicyExtensions.HandleTransientHttpError().RetryAsync(1);
+            bool isInvalidOperationException = false;
 
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, new Uri($"{DemoHelper.DemoBaseUrl}/api/demo/error?failures=1"));
+
+            try
+            {
+                await policy.ExecuteAsync(() => DemoHelper.DemoClient.SendAsync(request));
+            }
+            catch (InvalidOperationException ex)
+            {
+                isInvalidOperationException = true;
+            }            
+
+            Assert.IsTrue(isInvalidOperationException);
         }
 
         public void ClientTimeout_IsNotHttpRequestException()
