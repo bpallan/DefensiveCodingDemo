@@ -14,10 +14,17 @@ namespace DefensiveCoding.Demos._02_Timeout
     [TestClass]
     public class TimeoutDemos
     {
+        /// <summary>
+        /// Demonstate basic timeout behavior when call takes longer than the configured timeout of 1 second
+        /// Optimistic timeout will only work for async code that accepts a cancellation token
+        /// API call takes 10 seconds the first time it is called
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task BasicTimeout()
         {
-            var timeoutPolicy = Policy.TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+            var timeoutPolicy = Policy
+                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
             bool isTimeoutException = false;
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -35,10 +42,17 @@ namespace DefensiveCoding.Demos._02_Timeout
             Assert.IsTrue(sw.ElapsedMilliseconds < 2000);
         }
 
-        [TestMethod]
+        /// <summary>
+        /// Demonstrates that optimistic timeout will not work if not combined with cancellation token
+        /// The request will run to completion and return the result after the full 10 seconds has elapsed
+        /// API call takes 10 seconds the first time it is called
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]        
         public async Task OptimisticTimeout_FailsWithoutCancellationToken()
         {
-            var timeoutPolicy = Policy.TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+            var timeoutPolicy = Policy
+                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -49,10 +63,16 @@ namespace DefensiveCoding.Demos._02_Timeout
             Assert.IsTrue(sw.ElapsedMilliseconds > 2000);
         }
 
+        /// <summary>
+        /// Demonstrates that like the above code, sync code which obviously doesn't support a cancellation token fails
+        /// The request will run to completion and return the result after the full 10 seconds has elapsed
+        /// API call takes 10 seconds the first time it is called
+        /// </summary>
         [TestMethod]
         public void OptimisticTimeout_FailsForSynchronousCode()
         {
-            var timeoutPolicy = Policy.Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+            var timeoutPolicy = Policy
+                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -64,10 +84,16 @@ namespace DefensiveCoding.Demos._02_Timeout
             Assert.IsTrue(sw.ElapsedMilliseconds > 2000);
         }
 
+        /// <summary>
+        /// Demonstates that if you use a Pessimistic timeout, control will return to the caller after the specified timeout
+        /// Note: Since it has no way of killing the thread, the abandoned thread will run into the background until it times out or faults
+        /// I would reccomend combing this with a HttpClient timeout to avoid leaving the background thread open too long
+        /// </summary>
         [TestMethod]
         public void PessimisticTimeout_WorksForSynchronousCode()
         {
-            var timeoutPolicy = Policy.Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Pessimistic); // optimistic is default
+            var timeoutPolicy = Policy
+                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Pessimistic); 
             bool isTimeoutException = false;
 
             Stopwatch sw = new Stopwatch();
@@ -75,7 +101,7 @@ namespace DefensiveCoding.Demos._02_Timeout
 
             try
             {
-                string result = timeoutPolicy.Execute(() =>
+                timeoutPolicy.Execute(() =>
                     DemoHelper.DemoClient.GetStringAsync("api/demo/slow?failures=1").Result);
             }
             catch (TimeoutRejectedException)

@@ -17,10 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Http\DotNetCore\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\DefensiveCoding.Api\DefensiveCoding.Api.csproj" />
   </ItemGroup>
 
