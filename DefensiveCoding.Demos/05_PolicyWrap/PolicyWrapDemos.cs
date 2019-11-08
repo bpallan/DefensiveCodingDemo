@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -117,10 +118,72 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
         }
 
         // Non-Http
+        [TestMethod]
+        public async Task AddResiliencyToNonHttpCall()
+        {
+            var fallBackPolicy = Policy<string>
+                .Handle<Exception>()
+                .FallbackAsync<string>("Default!");
+
+            var timeoutPolicy = Policy
+                .TimeoutAsync<string>(TimeSpan.FromSeconds(5), TimeoutStrategy.Pessimistic);
+
+            var retryPolicy = Policy<string>
+                .Handle<Exception>()
+                .RetryAsync<string>(1);
+
+            var circuitBreakerPolicy = Policy<string>
+                .Handle<Exception>()
+                .CircuitBreakerAsync<string>(5, TimeSpan.FromSeconds(30));
+
+            var resiliencyPolicy = Policy
+                .WrapAsync<string>(fallBackPolicy, timeoutPolicy, retryPolicy, circuitBreakerPolicy);
+
+            // verify retry
+            string result = await resiliencyPolicy.ExecuteAsync(UnreliableDatabaseCall);
+            Assert.AreEqual("Success!", result);
+
+            // verify timeout
+            result = await resiliencyPolicy.ExecuteAsync(SlowDatabaseCall);
+            Assert.AreEqual("Default!", result);
+
+            // verify circuit breaker
+            for (int i = 0; i < 5; i++)
+            {
+                result = await resiliencyPolicy.ExecuteAsync(DatabaseIsDead);
+            }
+
+            Assert.AreEqual(CircuitState.Open, circuitBreakerPolicy.CircuitState);
+            Assert.AreEqual("Default!", result);
+        }
+
+        private async Task<string> SlowDatabaseCall()
+        {
+            await Task.Delay(10000);
+            return "Success!";
+        }
+
+        private int _counter = 0;
+        private async Task<string> UnreliableDatabaseCall()
+        {
+            _counter++;
+
+            if (_counter % 2 != 0)
+            {
+                throw new Exception("Something Exploded!!!");
+            }
+
+            return await Task.FromResult("Success!");
+        }
+
+        private Task<string> DatabaseIsDead()
+        {
+            throw new Exception("You broke the db!!!");
+        }
 
         [TestCleanup]
         public void Cleanup()
-        {
+        {                        
             DemoHelper.Reset();
         }
     }
