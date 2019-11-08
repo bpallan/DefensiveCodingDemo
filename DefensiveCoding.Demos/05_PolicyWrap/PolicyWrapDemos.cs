@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DefensiveCoding.Api.Helpers;
 using DefensiveCoding.Demos.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Polly;
@@ -19,9 +20,9 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
     {
         // Http Async
         [TestMethod]
-        public async Task AsyncHttpCall()
+        public async Task AddResiliencyToHttpCall()
         {
-
+            // alternative would be to wrap ExecuteAsync in try/catch and return default from there
             IAsyncPolicy<HttpResponseMessage> fallbackPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .Or<TimeoutRejectedException>()
@@ -32,6 +33,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                     Content = new StringContent("Default!")
                 });
 
+            // for sync code, you should replace this by setting the timeout on the HttpClient
             IAsyncPolicy<HttpResponseMessage> outerTimeoutPolicy = Policy
                 .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10), TimeoutStrategy.Optimistic);
 
@@ -71,9 +73,48 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             Assert.AreEqual("Default!", result);
         }
 
-        // Http Syc
-
         // 401 Retry
+        [TestMethod]
+        public async Task RefreshTokenOnUnauthorized()
+        {
+            string token = "MyBadToken";
+            bool giveGoodToken = true;
+
+            var circuitBreaker401Policy = Policy
+                .HandleResult<HttpResponseMessage>(resp => resp.StatusCode == HttpStatusCode.Unauthorized)
+                .CircuitBreakerAsync(1, TimeSpan.FromSeconds(30)); // because this is wrapped in retry, a failure means we still got a 401 even after token refresh 
+
+            var retry401Policy = Policy
+                .HandleResult<HttpResponseMessage>(resp => resp.StatusCode == HttpStatusCode.Unauthorized)
+                .RetryAsync(1, (resp, retryAttempt) =>
+                {
+                    if (resp.Result.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        // typically this would be call to IDS for new token
+                        token = giveGoodToken ? TokenFactory.GetGoodToken() : "AnotherBadToken";
+                    }
+                });
+
+            // in this case the circuit breaker is wrapping the retry so that we stop trying to get new tokens after a couple unauthorized failures in a row
+            var unauthorizedResiliencyPolicy = Policy
+                .WrapAsync(circuitBreaker401Policy, retry401Policy);
+
+            // refresh token like normal
+            var response =
+                await unauthorizedResiliencyPolicy.ExecuteAsync(() =>
+                    DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"));
+            Assert.IsTrue(response.IsSuccessStatusCode);
+
+            // simulate still getting 401 (ex. not in whitelist for api, using wrong scope, authority, etc)
+            token = "MyBadToken";
+            giveGoodToken = false;
+
+            response = await unauthorizedResiliencyPolicy.ExecuteAsync(() =>
+                DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"));
+
+            Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+            Assert.AreEqual(CircuitState.Open, circuitBreaker401Policy.CircuitState);
+        }
 
         // Non-Http
 
