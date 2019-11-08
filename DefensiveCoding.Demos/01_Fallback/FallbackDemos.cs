@@ -15,7 +15,6 @@ namespace DefensiveCoding.Demos._01_Fallback
     {
         /// <summary>
         /// Demonstrates a very basic fallback in which we just return a default string when any exception is thrown
-        /// API call returns a 500 Internal Server Error the first time it is called
         /// Note:  GetStringAsync exceptions on an error response.  Methods that return a response object do not exception so you must check the result or call EnsureSuccessStatusCode
         /// </summary>
         /// <returns></returns>
@@ -26,14 +25,13 @@ namespace DefensiveCoding.Demos._01_Fallback
                 .Handle<Exception>()
                 .FallbackAsync<string>("Default!");
 
-            var result = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/error?failures=1"));
+            var result = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/error"));
 
             Assert.AreEqual("Default!", result);
         }
 
         /// <summary>
         /// Demonstrates a basic fallback that is looking at the Response Status Code instead of trying to catch exceptions
-        /// API call returns a 500 Internal Server Error the first time it is called
         /// Fallback delegates demonstrate logging the fallback and returning a mock response
         /// Other behaviors might be to throw a custom exception, read from cache, etc
         /// </summary>
@@ -45,7 +43,7 @@ namespace DefensiveCoding.Demos._01_Fallback
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode)
                 .FallbackAsync(FallbackAction, OnFallbackAsync);
 
-            var response = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
+            var response = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error"));
             var content = await response.Content.ReadAsStringAsync();
 
             Assert.AreEqual("Default!", content);

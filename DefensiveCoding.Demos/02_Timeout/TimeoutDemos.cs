@@ -17,7 +17,6 @@ namespace DefensiveCoding.Demos._02_Timeout
         /// <summary>
         /// Demonstate basic timeout behavior when call takes longer than the configured timeout of 1 second
         /// Optimistic timeout will only work for async code that accepts a cancellation token
-        /// API call takes 10 seconds the first time it is called
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -31,7 +30,7 @@ namespace DefensiveCoding.Demos._02_Timeout
 
             try
             {
-                await timeoutPolicy.ExecuteAsync(ct => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", ct), CancellationToken.None);
+                await timeoutPolicy.ExecuteAsync(ct => DemoHelper.DemoClient.GetAsync("api/demo/slow", ct), CancellationToken.None);
             }
             catch (TimeoutRejectedException)
             {
@@ -45,7 +44,6 @@ namespace DefensiveCoding.Demos._02_Timeout
         /// <summary>
         /// Demonstrates that optimistic timeout will not work if not combined with cancellation token
         /// The request will run to completion and return the result after the full 10 seconds has elapsed
-        /// API call takes 10 seconds the first time it is called
         /// </summary>
         /// <returns></returns>
         [TestMethod]        
@@ -56,7 +54,7 @@ namespace DefensiveCoding.Demos._02_Timeout
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            string result = await timeoutPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/slow?failures=1"));            
+            string result = await timeoutPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/slow"));            
 
             // note that we waited the entire 10 seconds to get here
             Assert.AreEqual("Slow!", result);
@@ -66,7 +64,6 @@ namespace DefensiveCoding.Demos._02_Timeout
         /// <summary>
         /// Demonstrates that like the above code, sync code which obviously doesn't support a cancellation token fails
         /// The request will run to completion and return the result after the full 10 seconds has elapsed
-        /// API call takes 10 seconds the first time it is called
         /// </summary>
         [TestMethod]
         public void OptimisticTimeout_FailsForSynchronousCode()
@@ -77,7 +74,7 @@ namespace DefensiveCoding.Demos._02_Timeout
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            string result = timeoutPolicy.Execute(() => DemoHelper.DemoClient.GetStringAsync("api/demo/slow?failures=1").Result);
+            string result = timeoutPolicy.Execute(() => DemoHelper.DemoClient.GetStringAsync("api/demo/slow").Result);
 
             // note that we waited the entire 10 seconds to get here
             Assert.AreEqual("Slow!", result);
@@ -102,7 +99,7 @@ namespace DefensiveCoding.Demos._02_Timeout
             try
             {
                 timeoutPolicy.Execute(() =>
-                    DemoHelper.DemoClient.GetStringAsync("api/demo/slow?failures=1").Result);
+                    DemoHelper.DemoClient.GetStringAsync("api/demo/slow").Result);
             }
             catch (TimeoutRejectedException)
             {

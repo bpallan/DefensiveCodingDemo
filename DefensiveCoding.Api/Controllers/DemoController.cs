@@ -37,14 +37,10 @@ namespace DefensiveCoding.Api.Controllers
         [Route("slow")]
         public async Task<ActionResult<string>> Slow([FromQuery]int failures)
         {
-            if (_slowCount < failures)
+            if (_slowCount < failures || failures == 0)
             {
                 _slowCount++;
                 await Task.Delay(10000);                
-            }
-            else
-            {
-                _slowCount = 0;
             }
 
             return "Slow!";
@@ -68,14 +64,10 @@ namespace DefensiveCoding.Api.Controllers
         [Route("error")]
         public ActionResult<string> Error([FromQuery] int failures)
         {
-            if (_errorCount < failures)
+            if (_errorCount < failures || failures == 0)
             {
                 _errorCount++;
                 return new StatusCodeResult(500);
-            }
-            else
-            {
-                _errorCount = 0;
             }
 
             return "Success!";
@@ -85,15 +77,11 @@ namespace DefensiveCoding.Api.Controllers
         [Route("timeout")]
         public async Task<ActionResult<string>> Timeout([FromQuery] int failures)
         {
-            if (_timeoutCount < failures)
+            if (_timeoutCount < failures || failures == 0)
             {
                 _timeoutCount++;
                 await Task.Delay(10000);
                 return new StatusCodeResult(408);
-            }
-            else
-            {
-                _timeoutCount = 0;
             }
 
             return "Success!";

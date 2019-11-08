@@ -61,8 +61,7 @@ namespace DefensiveCoding.Demos._03_Retry
         
         /// <summary>
         /// Demonstrates checking the result yourself if you don't want to use the above extensions
-        /// In this case we are just handling a 401 which isn't a transient fault but can have special behavior (token refresh)
-        /// Api call returns a 401 UnAuthorized response until a valid token is passed        
+        /// In this case we are just handling a 401 which isn't a transient fault but can have special behavior (token refresh)      
         /// A more typical approach would be to catch 500 errors and request timeouts (408)
         /// </summary>
         /// <returns></returns>
@@ -91,7 +90,6 @@ namespace DefensiveCoding.Demos._03_Retry
         /// <summary>
         /// Demonstrates a basic wait and retry in which there is a delay between retries
         /// Typically when a caller is waiting for a response, you want this to be much shorter than 5 seconds demonstrated below
-        /// Api call returns a 500 Internal Server Error on first call
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -114,7 +112,6 @@ namespace DefensiveCoding.Demos._03_Retry
         /// A jitter prevents a high volume application from retrying a bunch of failed requests at the exact same time
         /// This can be extremely useful for async processing in which you have time to wait
         /// When a client is waiting for a response, the time between retires needs to be minimal
-        /// Api call returns a 500 Internal Server error on first call
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -136,8 +133,7 @@ namespace DefensiveCoding.Demos._03_Retry
 
         /// <summary>
         /// Demonstates that if you build a HttpRequestMessage outside of the retry policy, then retries will blow up
-        /// You don't have to worry about this if using delegating handlers 
-        /// Api call returns 500 Internal Server Error on first call
+        /// You don't have to worry about this if using delegating handlers         
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -164,8 +160,7 @@ namespace DefensiveCoding.Demos._03_Retry
 
         /// <summary>
         ///  Demonstates that a timeout happening on your HttpClient isn't considered a transient fault by Polly
-        /// See below for how to handle
-        /// Api call returns a response after 10 seconds has elapsed
+        /// See below for how to handle        
         /// </summary>
         /// <returns></returns>
         [TestMethod]
@@ -197,7 +192,6 @@ namespace DefensiveCoding.Demos._03_Retry
 
         /// <summary>
         /// Demonstates that you can add an "Or" to handle additional exceptions or results
-        /// Api call returns a response after 10 seconds has elapsed
         /// </summary>
         /// <returns></returns>
         [TestMethod]
