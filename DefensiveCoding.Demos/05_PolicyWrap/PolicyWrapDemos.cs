@@ -32,24 +32,42 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 {                   
                     // fetch default values or execue whatever behavior you want to fall back to
                     Content = new StringContent("Default!")
-                });
+                }, 
+                    // optional func or delegate to execute when fallback happens
+                    onFallbackAsync: OnFallbackAsync);
 
             // for sync code, you should replace this by setting the timeout on the HttpClient
             IAsyncPolicy<HttpResponseMessage> outerTimeoutPolicy = Policy
-                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10), TimeoutStrategy.Optimistic);
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10), TimeoutStrategy.Optimistic,                     
+                    // optional func or delegate to execute when timeout occurs
+                    onTimeoutAsync: OnTimeoutAsync);
 
             IAsyncPolicy<HttpResponseMessage> retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .Or<TimeoutRejectedException>() // retry on inner timeout (you decide if this fits your use case), don't retry on circuit breaker exception
-                .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromMilliseconds(500));
+
+                // retry on inner timeout (might be a bad idea for some scenerios, you decide if this fits your use case)
+                //don't retry on circuit breaker exception
+                .Or<TimeoutRejectedException>() 
+                .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromMilliseconds(500),                     
+                    // optional func or delegate to execute when retry occurs
+                    onRetryAsync: OnRetryAsync);
 
             IAsyncPolicy<HttpResponseMessage> circuitBreakerPolicy = Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // consider if you want to ignore 404s
                 .Or<Exception>()
-                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(5)); // shortening for demo, should be 30 or 60 seconds
+                // shortening for demo, should be 30 or 60 seconds
+                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(5), 
+                    onBreak: (exception, timespan, context) =>
+                    {
+                        Console.WriteLine("Circuit is open!");
+                    },
+                    onReset: (context) =>
+                    {
+                        Console.WriteLine("Circuit is closed!");
+                    }); 
 
             IAsyncPolicy<HttpResponseMessage> innerTimeoutPolicy = Policy
-                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Pessimistic);  // had to set to pessimistic to get this to work, todo: figure out why
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Pessimistic, onTimeoutAsync: OnTimeoutAsync);  // had to set to pessimistic to get this to work, todo: figure out why
 
             // wrap policies from outer to inner
             var resiliencyPolicy = Policy
@@ -72,6 +90,24 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             // verify circuit broken on errors    
             response = await retryPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error", CancellationToken.None));
             Assert.AreEqual("Default!", result);
+        }
+
+        private async Task OnRetryAsync(DelegateResult<HttpResponseMessage> exception, TimeSpan timeSpan, Context context)
+        {
+            // example only, log whatever details you deem relevant for trouble shooting or monitoring
+            await Console.Out.WriteLineAsync($"Retrying request!  CorrelationId: {context?.CorrelationId}");
+        }
+
+        private async Task OnTimeoutAsync(Context context, TimeSpan timespan, Task task)
+        {
+            // example only, log whatever details you deem relevant for trouble shooting or monitoring
+            await Console.Out.WriteLineAsync($"Timeout exceeded after {timespan.Seconds} seconds!  CorrelationId: {context?.CorrelationId}");
+        }
+
+        private async Task OnFallbackAsync(DelegateResult<HttpResponseMessage> exception, Context context)
+        {
+            // example only, log whatever details you deem relevant for trouble shooting or monitoring
+            await Console.Out.WriteAsync($"Returning fallback data!  CorrelationId: {context?.CorrelationId}");
         }
 
         // 401 Retry
