@@ -28,7 +28,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = Policy
                 .Handle<HttpRequestException>()
-                .RetryAsync(1);
+                .RetryAsync(1); // todo: figure out why standard logging helper doesn't work for this 1 instance
 
             var result = await policy.ExecuteAsync(async() =>
             {
@@ -39,6 +39,7 @@ namespace DefensiveCoding.Demos._03_Retry
 
             Assert.IsTrue(result.IsSuccessStatusCode);
         }
+
 
         /// <summary>
         /// Demonstrates using Http Polly Extensions to only retry on transient faults
@@ -51,7 +52,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .RetryAsync(1);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
 
             // no need to call EnsureSuccessStatusCode
             var response = await policy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
@@ -97,7 +98,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromSeconds(5));
+                .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromSeconds(5), onRetryAsync: PolicyLoggingHelper.LogWaitAndRetryAsync);
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -121,7 +122,8 @@ namespace DefensiveCoding.Demos._03_Retry
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 // 1 seconds, 2 seconds, 4 seconds, etc... + 0 to 500 ms jitter
-                .WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)/2) + TimeSpan.FromMilliseconds(jitterer.Next(0, 500)));
+                .WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)/2) + TimeSpan.FromMilliseconds(jitterer.Next(0, 500)), 
+                    onRetryAsync: PolicyLoggingHelper.LogWaitAndRetryAsync);
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -141,7 +143,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .RetryAsync(1);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
             bool isInvalidOperationException = false;
 
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, new Uri($"{DemoHelper.DemoBaseUrl}api/demo/error?failures=1"));
@@ -168,7 +170,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .RetryAsync(1);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
 
             HttpClient client = new HttpClient()
             {
@@ -200,7 +202,7 @@ namespace DefensiveCoding.Demos._03_Retry
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .Or<TaskCanceledException>()
-                .RetryAsync(1);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
 
             HttpClient client = new HttpClient()
             {
@@ -222,7 +224,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-                .RetryAsync(1);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
 
             var response = await policy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/timeout?failures=1"));
 

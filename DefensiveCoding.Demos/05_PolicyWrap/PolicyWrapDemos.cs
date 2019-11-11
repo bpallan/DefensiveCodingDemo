@@ -19,10 +19,17 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
     [TestClass]
     public class PolicyWrapDemos
     {
-        // Http Async
+        /// <summary>
+        /// Demonstrate adding a full range of policies for Http Calls
+        /// Fallback -> Outer Timeout -> Retry -> Circuit Breaker -> Inner Timeout -> Client Call
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task AddResiliencyToHttpCall()
         {
+            // todo: figure out good information to add to context
+
+            ///////////////////////// FALLBACK POLICY /////////////////////////
             // alternative would be to wrap ExecuteAsync in try/catch and return default from there
             IAsyncPolicy<HttpResponseMessage> fallbackPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
@@ -32,47 +39,44 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 {                   
                     // fetch default values or execue whatever behavior you want to fall back to
                     Content = new StringContent("Default!")
-                }, 
-                    // optional func or delegate to execute when fallback happens
-                    onFallbackAsync: OnFallbackAsync);
+                }, onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
 
+            ///////////////////////// OUTER TIMEOUT POLICY /////////////////////////
             // for sync code, you should replace this by setting the timeout on the HttpClient
             IAsyncPolicy<HttpResponseMessage> outerTimeoutPolicy = Policy
                 .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10), TimeoutStrategy.Optimistic,                     
-                    // optional func or delegate to execute when timeout occurs
-                    onTimeoutAsync: OnTimeoutAsync);
+                    onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync);
 
+            ///////////////////////// RETRY POLICY /////////////////////////
+            // we are retrying on inner timeout, this might be a bad idea for many scenerios
+            // you never want to retry on a circuit breaker exception
             IAsyncPolicy<HttpResponseMessage> retryPolicy = HttpPolicyExtensions
                 .HandleTransientHttpError()
-
-                // retry on inner timeout (might be a bad idea for some scenerios, you decide if this fits your use case)
-                //don't retry on circuit breaker exception
                 .Or<TimeoutRejectedException>() 
                 .WaitAndRetryAsync(1, retryAttempt => TimeSpan.FromMilliseconds(500),                     
-                    // optional func or delegate to execute when retry occurs
-                    onRetryAsync: OnRetryAsync);
+                    onRetryAsync: PolicyLoggingHelper.LogWaitAndRetryAsync);
 
+            ///////////////////////// CIRCUIT BREAKER POLICY /////////////////////////
+            // tyical duration of break should be 30-60 seconds.  Using 5 for this demo to make demo run faster
             IAsyncPolicy<HttpResponseMessage> circuitBreakerAsyncPolicy = Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // consider if you want to ignore 404s
                 .Or<Exception>()
-                // shortening for demo, should be 30 or 60 seconds
                 .CircuitBreakerAsync(5, TimeSpan.FromSeconds(5), 
-                    onBreak: (exception, timespan, context) =>
-                    {
-                        Console.WriteLine("Circuit is open!");
-                    },
-                    onReset: (context) =>
-                    {
-                        Console.WriteLine("Circuit is closed!");
-                    });
+                    onBreak: PolicyLoggingHelper.LogCircuitBroken,
+                    onReset: PolicyLoggingHelper.LogCircuitReset);
 
             // pointer to the circuit breaker so we can read/update its state as needed (haven't figured out a better way to do this)
+            // this is EXTREMELY useful for resetting between unit tests (expose a reset method to allow callers to reset your circuit breaker)
             ICircuitBreakerPolicy<HttpResponseMessage> circuitBreaker = (ICircuitBreakerPolicy<HttpResponseMessage>)circuitBreakerAsyncPolicy;
 
-            // inner timeout is totally optional and depends on use case.  The outer timeout is the most important for requests with callers waiting
+            ///////////////////////// INNER TIMOUT POLICY (Optional) /////////////////////////
+            // inner timeout is totally optional and depends on use case.  
+            // The outer timeout is the most important for requests with callers waiting
+            // Sometimes you might want an inner timeout slightly lower than the outer just so the circuit breaker will break on too many timeouts
             IAsyncPolicy<HttpResponseMessage> innerTimeoutPolicy = Policy
-                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Pessimistic, onTimeoutAsync: OnTimeoutAsync);  // had to set to pessimistic to get this to work, todo: figure out why
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Pessimistic, onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync);  // had to set to pessimistic to get this to work, todo: figure out why
 
+            ///////////////////////// POLICY WRAP /////////////////////////
             // wrap policies from outer to inner
             var resiliencyPolicy = Policy
                 .WrapAsync<HttpResponseMessage>(fallbackPolicy, outerTimeoutPolicy, retryPolicy, circuitBreakerAsyncPolicy, innerTimeoutPolicy);
@@ -109,36 +113,26 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             // verify circuit breaker is back open
             await resiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/success"));
             Assert.AreEqual(CircuitState.Closed, circuitBreaker.CircuitState);
-        }
+        }        
 
-        private async Task OnRetryAsync(DelegateResult<HttpResponseMessage> exception, TimeSpan timeSpan, Context context)
-        {
-            // example only, log whatever details you deem relevant for trouble shooting or monitoring
-            await Console.Out.WriteLineAsync($"Retrying request!  CorrelationId: {context?.CorrelationId}");
-        }
-
-        private async Task OnTimeoutAsync(Context context, TimeSpan timespan, Task task)
-        {
-            // example only, log whatever details you deem relevant for trouble shooting or monitoring
-            await Console.Out.WriteLineAsync($"Timeout exceeded after {timespan.Seconds} seconds!  CorrelationId: {context?.CorrelationId}");
-        }
-
-        private async Task OnFallbackAsync(DelegateResult<HttpResponseMessage> exception, Context context)
-        {
-            // example only, log whatever details you deem relevant for trouble shooting or monitoring
-            await Console.Out.WriteAsync($"Returning fallback data!  CorrelationId: {context?.CorrelationId}");
-        }
-
-        // 401 Retry
+        /// <summary>
+        /// Demonstate using retry and circuit breaker policies to get a new token on an unauthorized (401) response
+        /// Circuit breaker should always be used so we don't beat up the auth server if we have mis-matched credentials       
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task RefreshTokenOnUnauthorized()
         {
             string token = "MyBadToken";
             bool giveGoodToken = true;
 
+            // setting the the threshold very low because a failure means we got a new token but still got a 401
+            // typically means auth environment or scope wrong... or client not in the white list for calling api
             var circuitBreaker401Policy = Policy
                 .HandleResult<HttpResponseMessage>(resp => resp.StatusCode == HttpStatusCode.Unauthorized)
-                .CircuitBreakerAsync(1, TimeSpan.FromSeconds(30)); // because this is wrapped in retry, a failure means we still got a 401 even after token refresh 
+                .CircuitBreakerAsync(1, TimeSpan.FromSeconds(30),
+                    onBreak: PolicyLoggingHelper.LogCircuitBroken,
+                    onReset: PolicyLoggingHelper.LogCircuitReset); 
 
             var retry401Policy = Policy
                 .HandleResult<HttpResponseMessage>(resp => resp.StatusCode == HttpStatusCode.Unauthorized)
@@ -155,7 +149,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             var unauthorizedResiliencyPolicy = Policy
                 .WrapAsync(circuitBreaker401Policy, retry401Policy);
 
-            // refresh token like normal
+            // refresh token successfully
             var response =
                 await unauthorizedResiliencyPolicy.ExecuteAsync(() =>
                     DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"));
@@ -172,20 +166,27 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             Assert.AreEqual(CircuitState.Open, circuitBreaker401Policy.CircuitState);
         }
 
-        // Non-Http
+        /// <summary>
+        /// Demonstate applying multiple policies for non-http calls
+        /// WCF, Database, Cache, another others
+        /// Main difference is you have to be more exception based then response based
+        /// You also want to avoid retrying database or cache calls as that can make the problem worse
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task AddResiliencyToNonHttpCall()
         {
             var fallBackPolicy = Policy<string>
                 .Handle<Exception>()
-                .FallbackAsync<string>("Default!");
+                .FallbackAsync<string>("Default!", onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
 
             var timeoutPolicy = Policy
                 .TimeoutAsync<string>(TimeSpan.FromSeconds(5), TimeoutStrategy.Pessimistic);
 
+            // retry works well for WCF calls, should mostly likely be avoided for database or cache
             var retryPolicy = Policy<string>
                 .Handle<Exception>()
-                .RetryAsync<string>(1);
+                .RetryAsync<string>(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
 
             var circuitBreakerPolicy = Policy<string>
                 .Handle<Exception>()
@@ -195,31 +196,32 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 .WrapAsync<string>(fallBackPolicy, timeoutPolicy, retryPolicy, circuitBreakerPolicy);
 
             // verify retry
-            string result = await resiliencyPolicy.ExecuteAsync(UnreliableDatabaseCall);
+            string result = await resiliencyPolicy.ExecuteAsync(UnreliableCall);
             Assert.AreEqual("Success!", result);
 
             // verify timeout
-            result = await resiliencyPolicy.ExecuteAsync(SlowDatabaseCall);
+            result = await resiliencyPolicy.ExecuteAsync(SlowCall);
             Assert.AreEqual("Default!", result);
 
             // verify circuit breaker
             for (int i = 0; i < 5; i++)
             {
-                result = await resiliencyPolicy.ExecuteAsync(DatabaseIsDead);
+                result = await resiliencyPolicy.ExecuteAsync(BrokenCall);
             }
 
             Assert.AreEqual(CircuitState.Open, circuitBreakerPolicy.CircuitState);
             Assert.AreEqual("Default!", result);
-        }
+        }        
 
-        private async Task<string> SlowDatabaseCall()
+        ///////////////////////// HELPER FUNCTIONS FOR NON-HTTP DEMOS /////////////////////////
+        private async Task<string> SlowCall()
         {
             await Task.Delay(10000);
             return "Success!";
         }
 
         private int _counter = 0;
-        private async Task<string> UnreliableDatabaseCall()
+        private async Task<string> UnreliableCall()
         {
             _counter++;
 
@@ -231,9 +233,9 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             return await Task.FromResult("Success!");
         }
 
-        private Task<string> DatabaseIsDead()
+        private Task<string> BrokenCall()
         {
-            throw new Exception("You broke the db!!!");
+            throw new Exception("This service/database/etc is dead!!!");
         }
 
         [TestCleanup]

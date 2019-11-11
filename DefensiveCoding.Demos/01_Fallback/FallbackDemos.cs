@@ -23,7 +23,7 @@ namespace DefensiveCoding.Demos._01_Fallback
         {
             var fallBackPolicy = Policy<string>
                 .Handle<Exception>()
-                .FallbackAsync<string>("Default!");
+                .FallbackAsync<string>("Default!", onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
 
             var result = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/error"));
 
@@ -41,19 +41,12 @@ namespace DefensiveCoding.Demos._01_Fallback
         {
             var fallBackPolicy = Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode)
-                .FallbackAsync(FallbackAction, OnFallbackAsync);
+                .FallbackAsync(FallbackAction, PolicyLoggingHelper.LogFallbackAsync);
 
             var response = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error"));
             var content = await response.Content.ReadAsStringAsync();
 
             Assert.AreEqual("Default!", content);
-        }
-
-        // demonstrate logging when a fallback is fired
-        private Task OnFallbackAsync(DelegateResult<HttpResponseMessage> response, Context context)
-        {
-            Console.WriteLine("Log that fallback was hit");
-            return Task.CompletedTask;
         }
 
         // demonstrate returning a mock response

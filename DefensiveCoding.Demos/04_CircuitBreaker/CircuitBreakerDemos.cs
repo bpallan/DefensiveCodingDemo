@@ -23,7 +23,9 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
         {
             var policy = Policy
                 .Handle<Exception>()
-                .CircuitBreakerAsync(2, TimeSpan.FromSeconds(30));
+                .CircuitBreakerAsync(2, TimeSpan.FromSeconds(30),
+                    onBreak: PolicyLoggingHelper.LogCircuitBroken, 
+                    onReset: PolicyLoggingHelper.LogCircuitReset);
             bool circuitIsBroken = false;
             int attemptCount = 0;
 
@@ -51,6 +53,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
             Assert.AreEqual(2, attemptCount);
             Assert.IsTrue(circuitIsBroken);
         }
+        
 
         /// <summary>
         /// Demonstates the full life cycle of a circuit breaker
@@ -66,7 +69,9 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
         {
             var policy = Policy
                 .Handle<Exception>()
-                .CircuitBreakerAsync(2, TimeSpan.FromSeconds(5));
+                .CircuitBreakerAsync(2, TimeSpan.FromSeconds(5),
+                    onBreak: PolicyLoggingHelper.LogCircuitBroken,
+                    onReset: PolicyLoggingHelper.LogCircuitReset);
 
             // break circuit
             for (int i = 0; i < 2; i++)
@@ -126,7 +131,9 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                     failureThreshold: 0.5, // 50% failure rate
                     samplingDuration: TimeSpan.FromSeconds(5), // resets every 5 seconds
                     minimumThroughput: 5, // must have at least 5 requests in 5 seconds to qualify
-                    durationOfBreak: TimeSpan.FromSeconds(30) // how long to break
+                    durationOfBreak: TimeSpan.FromSeconds(30), // how long to break                    
+                    onBreak: PolicyLoggingHelper.LogCircuitBroken,
+                    onReset: PolicyLoggingHelper.LogCircuitReset
                 );
 
             for (int i = 0; i < 10; i++)

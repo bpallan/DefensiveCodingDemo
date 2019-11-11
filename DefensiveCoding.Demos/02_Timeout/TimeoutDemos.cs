@@ -23,7 +23,7 @@ namespace DefensiveCoding.Demos._02_Timeout
         public async Task BasicTimeout()
         {
             var timeoutPolicy = Policy
-                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic, onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync); // optimistic is default
             bool isTimeoutException = false;
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -50,7 +50,7 @@ namespace DefensiveCoding.Demos._02_Timeout
         public async Task OptimisticTimeout_FailsWithoutCancellationToken()
         {
             var timeoutPolicy = Policy
-                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+                .TimeoutAsync(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic, onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync); // optimistic is default
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -69,7 +69,7 @@ namespace DefensiveCoding.Demos._02_Timeout
         public void OptimisticTimeout_FailsForSynchronousCode()
         {
             var timeoutPolicy = Policy
-                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic is default
+                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic, onTimeout: PolicyLoggingHelper.LogTimeout); // optimistic is default
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -90,7 +90,7 @@ namespace DefensiveCoding.Demos._02_Timeout
         public void PessimisticTimeout_WorksForSynchronousCode()
         {
             var timeoutPolicy = Policy
-                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Pessimistic); 
+                .Timeout(TimeSpan.FromSeconds(1), TimeoutStrategy.Pessimistic, onTimeout: PolicyLoggingHelper.LogTimeout); 
             bool isTimeoutException = false;
 
             Stopwatch sw = new Stopwatch();
