@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -51,8 +52,10 @@ namespace DefensiveCoding.Demos._01_Fallback
 
         // demonstrate returning a mock response
         private Task<HttpResponseMessage> FallbackAction(DelegateResult<HttpResponseMessage> responseToFailedRequest, Context context, CancellationToken cancellationToken)
-        {            
-            HttpResponseMessage httpResponseMessage = new HttpResponseMessage(responseToFailedRequest.Result.StatusCode)
+        {
+            // mocking a successful response
+            // you can pass in responseToFailedRequest.Result.StatusCode if you want to preserve the original error response code
+            HttpResponseMessage httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK)        
             {
                 Content = new StringContent("Default!")
             };
