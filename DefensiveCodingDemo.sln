@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.168
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DefensiveCoding.Api", "DefensiveCoding.Api\DefensiveCoding.Api.csproj", "{4946C862-5A7E-48D0-B171-DF72C9077443}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DefensiveCoding.Api", "DefensiveCoding.Api\DefensiveCoding.Api.csproj", "{4946C862-5A7E-48D0-B171-DF72C9077443}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DefensiveCoding.Demos", "DefensiveCoding.Demos\DefensiveCoding.Demos.csproj", "{460C8436-046B-4987-91FB-98E3E1D402DB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{4946C862-5A7E-48D0-B171-DF72C9077443}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4946C862-5A7E-48D0-B171-DF72C9077443}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4946C862-5A7E-48D0-B171-DF72C9077443}.Release|Any CPU.Build.0 = Release|Any CPU
+		{460C8436-046B-4987-91FB-98E3E1D402DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{460C8436-046B-4987-91FB-98E3E1D402DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{460C8436-046B-4987-91FB-98E3E1D402DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{460C8436-046B-4987-91FB-98E3E1D402DB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
