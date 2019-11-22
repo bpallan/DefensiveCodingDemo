@@ -44,6 +44,35 @@ namespace DefensiveCoding.Demos._07_PolicyRegistry
             Assert.AreEqual("Default!", responseMessage);
         }
 
+        [TestMethod]
+        public async Task PolicyRegistry_WithHttpClientFactory()
+        {
+            // typically this stuff would go in Startup.ConfigureServices
+            IServiceCollection services = new ServiceCollection();
+            services.AddPolicyRegistry(PolicyRegistryFactory.GetPolicyRegistry());
+
+            services.AddHttpClient("CustomerService",
+                    client =>
+                    {
+                        client.BaseAddress = new Uri(DemoHelper.DemoBaseUrl);
+                        client.Timeout =
+                            TimeSpan.FromSeconds(
+                                3); // this will apply as an outer timeout to the entire request flow, including waits, retries,etc
+                    })
+                .AddPolicyHandlerFromRegistry("CustomerServicePolicy");
+
+            // typically you would inject http client factory into class via constructor
+            var serviceProvider = services.BuildServiceProvider();
+            var clientFactory = serviceProvider.GetService<IHttpClientFactory>();
+
+            // create client using factory
+            var httpClient = clientFactory.CreateClient("CustomerService");
+
+            // verify retry on error
+            var responseMessage = await httpClient.GetStringAsync("api/demo/error?failures=1");
+            Assert.AreEqual("Success!", responseMessage);
+        }
+
         [TestCleanup]
         public void Cleanup()
         {
