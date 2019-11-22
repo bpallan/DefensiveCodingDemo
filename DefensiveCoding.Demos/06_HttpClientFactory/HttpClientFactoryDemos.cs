@@ -20,6 +20,13 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
     [TestClass]
     public class HttpClientFactoryDemos
     {        
+        /// <summary>
+        /// Demonstrates how to add multiple policies directly to HttpClientFactory during Startup
+        /// The actual policy definitions are less relevant to this demo so I moved them to a DemoPolicyFactory class to clean up this demo
+        /// Typically you would inject an HttpClientFactory or HttpClient into your class instead of pulling it directly from services
+        /// I am using named clients as I prefer that approach.  It is easy to modify this code to inject an HttpClient into a specific class
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task HttpClientFactory_ApplyMultiplePolicies()
         {
@@ -53,6 +60,12 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
         }
 
+        /// <summary>
+        /// Demonstrates how to add policies to HttpClientFactory via extension method.
+        /// The extension method is located in the Extensions folder (HttpClientBuilderExtensions)
+        /// A reference to the circuit breaker is provided via out parameter so it can be referenced for testing (check status, reset, etc)
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task HttpClientFactory_ApplyPoliciesUsingExtensionMethod()
         {
@@ -69,6 +82,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
         }
 
+        // extracted this out to a seperate method since the above 2 demos are accomplishing the exact same thing
         private static async Task VerifyResiliencyPolicies(IServiceCollection services,
             ICircuitBreakerPolicy<HttpResponseMessage> circuitBreakerPointer)
         {

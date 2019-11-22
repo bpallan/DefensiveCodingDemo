@@ -16,6 +16,13 @@ namespace DefensiveCoding.Demos._07_PolicyRegistry
     [TestClass]
     public class PolicyRegistryDemos
     {
+        /// <summary>
+        /// Demonstrates how to use the policy registry to define 2 different policies for 2 different dependencies
+        /// The registry is built using the PolicyRegistryFactory class in the Factories folder
+        /// Typically the registry is setup in Startup.ConfigureServices and you inject into the classes that need it
+        /// Not demo'ed here but you could add an out parameter to capture a pointer to the circuit breaker if you need to do so for testing
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task PolicyRegistry_BasicExample()
         {
@@ -44,6 +51,10 @@ namespace DefensiveCoding.Demos._07_PolicyRegistry
             Assert.AreEqual("Default!", responseMessage);
         }
 
+        /// <summary>
+        /// Demonstrates injecting the policy registry into HttpClientFactory        
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task PolicyRegistry_WithHttpClientFactory()
         {
