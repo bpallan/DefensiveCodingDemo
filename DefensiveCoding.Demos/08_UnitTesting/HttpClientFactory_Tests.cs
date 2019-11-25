@@ -69,5 +69,27 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             Assert.AreEqual("Tester", customer.LastName);
             Assert.AreEqual("test@test.com", customer.Email);
         }
+
+        [TestMethod]
+        public async Task HttpClientFactory_TestPoliciesWithCode()
+        {
+            // setup
+            IServiceCollection services = new ServiceCollection();
+            services.AddHttpClient("CustomerService", client => client.BaseAddress = new Uri("http://localhost/"))
+                .AddResiliencyPolicies(out var circuitBreaker)
+                .AddHttpMessageHandler(() => new CustomerResiliencyTestHandler(1));
+            services.AddTransient<CustomerService_ClientFactory>();
+            var serviceProvider = services.BuildServiceProvider();
+            var classUnderTest = serviceProvider.GetService<CustomerService_ClientFactory>();
+
+            // act
+            var customer = await classUnderTest.GetCustomerByIdAsync(1);
+
+            // assert
+            Assert.AreEqual(1, customer.CustomerId);
+            Assert.AreEqual("Test", customer.FirstName);
+            Assert.AreEqual("Tester", customer.LastName);
+            Assert.AreEqual("test@test.com", customer.Email);
+        }
     }
 }
