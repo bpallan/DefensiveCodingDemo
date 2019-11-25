@@ -18,7 +18,7 @@ namespace DefensiveCoding.Demos._08_UnitTesting
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task TestCodeSeperateWithoutPolicies()
+        public async Task HttpClientFactory_TestCodeSeperateWithoutPolicies()
         {
             // setup
             var mockClientFactory = new Mock<IHttpClientFactory>();
