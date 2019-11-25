@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using DefensiveCoding.Demos.Extensions;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
+using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json;
 
 namespace DefensiveCoding.Demos._08_UnitTesting
 {
@@ -32,6 +36,32 @@ namespace DefensiveCoding.Demos._08_UnitTesting
 
             // act
             var customer = await classUnderTest.GetCustomerByIdAsync(1);
+
+            // assert
+            Assert.AreEqual(1, customer.CustomerId);
+            Assert.AreEqual("Test", customer.FirstName);
+            Assert.AreEqual("Tester", customer.LastName);
+            Assert.AreEqual("test@test.com", customer.Email);
+        }
+
+        [TestMethod]
+        public async Task HttpClientFactory_TestPoliciesSeperateFromCode()
+        {
+            // setup
+            IServiceCollection services = new ServiceCollection();
+            services
+                .AddHttpClient("CustomerService")
+                .AddResiliencyPolicies(out var circuitBreaker) // comment out this line of code to verify mock handler is working
+                .AddHttpMessageHandler(() => new CustomerResiliencyTestHandler(1)); 
+            var serviceProvider = services.BuildServiceProvider();
+            var clientFactory = serviceProvider.GetService<IHttpClientFactory>();
+            var client = clientFactory.CreateClient("CustomerService");
+
+            // act
+            var response = await client.GetAsync($"http://localhost/api/customers/id/1"); // it really doesn't matter what you pass here since mock behavior isn't check the request
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            var customer = JsonConvert.DeserializeObject<CustomerModel>(json);
 
             // assert
             Assert.AreEqual(1, customer.CustomerId);
