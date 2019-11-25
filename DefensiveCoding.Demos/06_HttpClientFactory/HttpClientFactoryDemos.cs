@@ -37,7 +37,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
             // using a named client, can specify a <TClient> to inject it into a specific class
 
             // setup circuit breaker seperately so you can maintain a pointer to it for testing (validate state, reset, etc)
-            var circuitBreakerPolicy = DemoPolicyFactory.GetCircuitBreakerPolicy();
+            var circuitBreakerPolicy = DemoPolicyFactory.GetHttpCircuitBreakerPolicy();
             ICircuitBreakerPolicy<HttpResponseMessage> circuitBreakerPointer = (ICircuitBreakerPolicy<HttpResponseMessage>)circuitBreakerPolicy;
 
             services.AddHttpClient("CustomerService",
@@ -51,10 +51,10 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
 
                 // add policies from outer (1st executed) to inner (closest to dependency call)
                 // all policies must implement IASyncPolicy
-                .AddPolicyHandler(DemoPolicyFactory.GetFallbackPolicy())
-                .AddPolicyHandler(DemoPolicyFactory.GetRetryPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpFallbackPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpRetryPolicy())
                 .AddPolicyHandler(circuitBreakerPolicy)
-                .AddPolicyHandler(DemoPolicyFactory.GetInnerTimeoutPolicy());
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
 
             ///// TEST POLICIES /////            
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);

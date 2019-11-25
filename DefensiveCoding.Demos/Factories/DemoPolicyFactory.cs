@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DefensiveCoding.Demos.Helpers;
+using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Timeout;
@@ -17,7 +18,7 @@ namespace DefensiveCoding.Demos.Factories
     /// </summary>
     internal static class DemoPolicyFactory
     {
-        public static IAsyncPolicy<HttpResponseMessage> GetFallbackPolicy()
+        public static IAsyncPolicy<HttpResponseMessage> GetHttpFallbackPolicy()
         {
             return Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // catch any bad responses, transient or not         
@@ -25,7 +26,7 @@ namespace DefensiveCoding.Demos.Factories
                 .FallbackAsync(FallbackAction, PolicyLoggingHelper.LogFallbackAsync);
         }
 
-        public static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+        public static IAsyncPolicy<HttpResponseMessage> GetHttpRetryPolicy()
         {
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
@@ -33,7 +34,7 @@ namespace DefensiveCoding.Demos.Factories
                 .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
         }
 
-        public static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+        public static IAsyncPolicy<HttpResponseMessage> GetHttpCircuitBreakerPolicy()
         {
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
@@ -41,7 +42,7 @@ namespace DefensiveCoding.Demos.Factories
                 .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
         }
 
-        public static IAsyncPolicy<HttpResponseMessage> GetInnerTimeoutPolicy()
+        public static IAsyncPolicy<HttpResponseMessage> GetHttpInnerTimeoutPolicy()
         {
             return Policy
                 .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic will work well with http client factory
@@ -57,6 +58,28 @@ namespace DefensiveCoding.Demos.Factories
                 Content = new StringContent("Default!")
             };
             return Task.FromResult(httpResponseMessage);
+        }
+
+        public static IAsyncPolicy<CustomerModel> GetCustomerDatabaseResiliencyPolicy()
+        {
+            var fallBackPolicy = Policy<CustomerModel>
+                .Handle<Exception>()
+                .FallbackAsync(new CustomerModel()
+                {
+                    Message = "Customer Is Not Available."
+                }, onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
+
+            var timeoutPolicy = Policy
+                .TimeoutAsync<CustomerModel>(TimeSpan.FromSeconds(5), TimeoutStrategy.Pessimistic);
+
+            var circuitBreakerPolicy = Policy<CustomerModel>
+                .Handle<Exception>()
+                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
+
+            var resiliencyPolicy = Policy
+                .WrapAsync(fallBackPolicy, timeoutPolicy, circuitBreakerPolicy);
+
+            return resiliencyPolicy;
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using DefensiveCoding.Demos.Factories;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Interfaces;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
@@ -38,6 +40,32 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             Assert.AreEqual(testCustomer.FirstName, customer.FirstName);
             Assert.AreEqual(testCustomer.LastName, customer.LastName);
             Assert.AreEqual(testCustomer.Email, customer.Email);
+        }
+
+        [TestMethod]
+        public async Task WrappedDependency_TestPoliciesSeperateFromCode()
+        {
+            // setup
+            var resiliencyPolicy = DemoPolicyFactory.GetCustomerDatabaseResiliencyPolicy();
+
+            // act
+            var sw = new Stopwatch();
+            sw.Start();
+            var customer = await resiliencyPolicy.ExecuteAsync(async () =>
+            {
+                await Task.Delay(10000);
+                return new CustomerModel()
+                {
+                    CustomerId = 1,
+                    FirstName = "Test",
+                    LastName = "Tester",
+                    Email = "test@test.com"
+                };
+            });
+
+            // assert
+            Assert.AreEqual("Customer Is Not Available.", customer.Message);
+            Assert.IsTrue(sw.ElapsedMilliseconds < 10000);
         }
     }
 }

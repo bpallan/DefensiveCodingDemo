@@ -14,14 +14,14 @@ namespace DefensiveCoding.Demos.Extensions
         // return a reference to the circuit breaker so callers can maninuplate it as needed for testing
         public static IHttpClientBuilder AddResiliencyPolicies(this IHttpClientBuilder builder, out ICircuitBreakerPolicy<HttpResponseMessage> circuitBreaker)
         {
-            var circuitBreakerPolicy = DemoPolicyFactory.GetCircuitBreakerPolicy();
+            var circuitBreakerPolicy = DemoPolicyFactory.GetHttpCircuitBreakerPolicy();
             circuitBreaker = (ICircuitBreakerPolicy<HttpResponseMessage>)circuitBreakerPolicy;
 
             builder
-                .AddPolicyHandler(DemoPolicyFactory.GetFallbackPolicy())
-                .AddPolicyHandler(DemoPolicyFactory.GetRetryPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpFallbackPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpRetryPolicy())
                 .AddPolicyHandler(circuitBreakerPolicy)
-                .AddPolicyHandler(DemoPolicyFactory.GetInnerTimeoutPolicy());
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
 
             return builder;
         }
