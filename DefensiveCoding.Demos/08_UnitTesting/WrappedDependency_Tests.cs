@@ -29,7 +29,7 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             };
             var mockRepository = new Mock<ICustomerRepository>();
             mockRepository.Setup(x => x.QueryCustomerById(It.IsAny<int>())).Returns(Task.FromResult(testCustomer));
-            IAsyncPolicy mockPolicy = Policy.NoOpAsync();
+            IAsyncPolicy<CustomerModel> mockPolicy = Policy.NoOpAsync<CustomerModel>();
             var classUnderTest = new CustomerService_Database(mockRepository.Object, mockPolicy);
 
             // act
@@ -66,6 +66,38 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             // assert
             Assert.AreEqual("Customer Is Not Available.", customer.Message);
             Assert.IsTrue(sw.ElapsedMilliseconds < 10000);
+        }
+
+        [TestMethod]
+        public async Task WrappedDependency_TestPoliciesWithCode()
+        {
+            // setup
+            var resiliencyPolicy = DemoPolicyFactory.GetCustomerDatabaseResiliencyPolicy();
+            var classUnderTest = new CustomerService_Database(new TestRepository(), resiliencyPolicy);
+
+            // act
+            var sw = new Stopwatch();
+            sw.Start();
+            var customer = await classUnderTest.GetCustomerByIdAsync(1);
+
+            // assert
+            Assert.AreEqual("Customer Is Not Available.", customer.Message);
+            Assert.IsTrue(sw.ElapsedMilliseconds < 10000);
+        }
+
+        private class TestRepository : ICustomerRepository
+        {
+            public async Task<CustomerModel> QueryCustomerById(int id)
+            {
+                await Task.Delay(10000);
+                return new CustomerModel()
+                {
+                    CustomerId = 1,
+                    FirstName = "Test",
+                    LastName = "Tester",
+                    Email = "test@test.com"
+                };
+            }
         }
     }
 }

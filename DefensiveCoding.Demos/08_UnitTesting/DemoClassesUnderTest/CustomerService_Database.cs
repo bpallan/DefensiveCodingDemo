@@ -11,9 +11,9 @@ namespace DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest
     internal class CustomerService_Database
     {
         private readonly ICustomerRepository _customerRepository;
-        private readonly IAsyncPolicy _resiliencyPolicy;
+        private readonly IAsyncPolicy<CustomerModel> _resiliencyPolicy;
 
-        public CustomerService_Database(ICustomerRepository customerRepository, IAsyncPolicy resiliencyPolicy)
+        public CustomerService_Database(ICustomerRepository customerRepository, IAsyncPolicy<CustomerModel> resiliencyPolicy)
         {
             _customerRepository = customerRepository;
             _resiliencyPolicy = resiliencyPolicy;
