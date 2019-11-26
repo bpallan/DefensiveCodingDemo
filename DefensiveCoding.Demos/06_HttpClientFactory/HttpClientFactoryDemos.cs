@@ -51,7 +51,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
 
                 // add policies from outer (1st executed) to inner (closest to dependency call)
                 // all policies must implement IASyncPolicy
-                .AddPolicyHandler(DemoPolicyFactory.GetHttpFallbackPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpFallbackPolicy("Default!"))
                 .AddPolicyHandler(DemoPolicyFactory.GetHttpRetryPolicy())
                 .AddPolicyHandler(circuitBreakerPolicy)
                 .AddPolicyHandler(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
@@ -78,7 +78,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
                             TimeSpan.FromSeconds(
                                 3); // this will apply as an outer timeout to the entire request flow, including waits, retries,etc
                     })
-                .AddResiliencyPolicies(out var circuitBreakerPointer);
+                .AddResiliencyPolicies(out var circuitBreakerPointer, "Default!");
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
         }
 

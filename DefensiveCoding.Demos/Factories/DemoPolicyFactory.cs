@@ -18,12 +18,12 @@ namespace DefensiveCoding.Demos.Factories
     /// </summary>
     internal static class DemoPolicyFactory
     {
-        public static IAsyncPolicy<HttpResponseMessage> GetHttpFallbackPolicy()
+        public static IAsyncPolicy<HttpResponseMessage> GetHttpFallbackPolicy(string defaultValue)
         {
             return Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // catch any bad responses, transient or not         
                 .Or<Exception>() // handle ANY exception we get back
-                .FallbackAsync(FallbackAction, PolicyLoggingHelper.LogFallbackAsync);
+                .FallbackAsync((result, context, ct) => FallbackAction(result, context, ct, defaultValue), PolicyLoggingHelper.LogFallbackAsync);
         }
 
         public static IAsyncPolicy<HttpResponseMessage> GetHttpRetryPolicy()
@@ -49,13 +49,13 @@ namespace DefensiveCoding.Demos.Factories
         }
 
         // demonstrate returning a mock response
-        private static Task<HttpResponseMessage> FallbackAction(DelegateResult<HttpResponseMessage> responseToFailedRequest, Context context, CancellationToken cancellationToken)
+        private static Task<HttpResponseMessage> FallbackAction(DelegateResult<HttpResponseMessage> responseToFailedRequest, Context context, CancellationToken cancellationToken, string defaultValue)
         {
             // mocking a successful response
             // you can pass in responseToFailedRequest.Result.StatusCode if you want to preserve the original error response code
             HttpResponseMessage httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("Default!")
+                Content = new StringContent(defaultValue)
             };
             return Task.FromResult(httpResponseMessage);
         }

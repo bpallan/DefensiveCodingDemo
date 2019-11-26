@@ -10,19 +10,25 @@ using Newtonsoft.Json;
 
 namespace DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers
 {
-    internal class CustomerResiliencyTestHandler : DelegatingHandler
+    internal class CustomerErrorMockHandler : DelegatingHandler
     {
-        private readonly int _failures;
+        private int _failures;
         private int _failureCount = 0;        
 
-        public CustomerResiliencyTestHandler(int failures)  
+        public CustomerErrorMockHandler(int failures = 0)  
         {
             _failures = failures;
         }
 
+        public void ResetFailures(int failures = 0)
+        {
+            _failures = failures;
+            _failureCount = 0;
+        }
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            if (_failureCount < _failures)
+            if (_failures == 0 || _failureCount < _failures)
             {
                 _failureCount++;
                 return new HttpResponseMessage()

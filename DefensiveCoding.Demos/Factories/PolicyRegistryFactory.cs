@@ -13,14 +13,14 @@ namespace DefensiveCoding.Demos.Factories
             PolicyRegistry registry = new PolicyRegistry();
 
             var customerServicePolicy =
-                DemoPolicyFactory.GetHttpFallbackPolicy()
+                DemoPolicyFactory.GetHttpFallbackPolicy("Default!")
                     .WrapAsync(DemoPolicyFactory.GetHttpRetryPolicy()
                     .WrapAsync(DemoPolicyFactory.GetHttpCircuitBreakerPolicy())
                     .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy()));
 
             // does not include retry
             var productServicePolicy =
-                DemoPolicyFactory.GetHttpFallbackPolicy()
+                DemoPolicyFactory.GetHttpFallbackPolicy("Default!")
                     .WrapAsync(DemoPolicyFactory.GetHttpCircuitBreakerPolicy())
                     .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
 
