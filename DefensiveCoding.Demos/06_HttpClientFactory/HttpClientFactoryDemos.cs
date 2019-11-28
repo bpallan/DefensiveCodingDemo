@@ -1,19 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using DefensiveCoding.Demos.Extensions;
 using DefensiveCoding.Demos.Factories;
 using DefensiveCoding.Demos.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Polly;
 using Polly.CircuitBreaker;
-using Polly.Extensions.Http;
-using Polly.Timeout;
 
 namespace DefensiveCoding.Demos._06_HttpClientFactory
 {
@@ -37,7 +30,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
             // using a named client, can specify a <TClient> to inject it into a specific class
 
             // setup circuit breaker seperately so you can maintain a pointer to it for testing (validate state, reset, etc)
-            var circuitBreakerPolicy = DemoPolicyFactory.GetCircuitBreakerPolicy();
+            var circuitBreakerPolicy = DemoPolicyFactory.GetHttpCircuitBreakerPolicy();
             ICircuitBreakerPolicy<HttpResponseMessage> circuitBreakerPointer = (ICircuitBreakerPolicy<HttpResponseMessage>)circuitBreakerPolicy;
 
             services.AddHttpClient("CustomerService",
@@ -51,10 +44,10 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
 
                 // add policies from outer (1st executed) to inner (closest to dependency call)
                 // all policies must implement IASyncPolicy
-                .AddPolicyHandler(DemoPolicyFactory.GetFallbackPolicy())
-                .AddPolicyHandler(DemoPolicyFactory.GetRetryPolicy())
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpFallbackPolicy("Default!"))
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpRetryPolicy())
                 .AddPolicyHandler(circuitBreakerPolicy)
-                .AddPolicyHandler(DemoPolicyFactory.GetInnerTimeoutPolicy());
+                .AddPolicyHandler(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
 
             ///// TEST POLICIES /////            
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
@@ -78,7 +71,7 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
                             TimeSpan.FromSeconds(
                                 3); // this will apply as an outer timeout to the entire request flow, including waits, retries,etc
                     })
-                .AddResiliencyPolicies(out var circuitBreakerPointer);
+                .AddResiliencyPolicies(out var circuitBreakerPointer, "Default!");
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
         }
 
