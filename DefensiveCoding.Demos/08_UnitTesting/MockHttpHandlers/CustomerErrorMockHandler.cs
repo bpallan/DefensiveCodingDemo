@@ -10,6 +10,15 @@ using Newtonsoft.Json;
 
 namespace DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers
 {
+    /// <summary>
+    /// Sample delegating handler for demo'ing mock responses
+    /// A regular HttpMessageHandler would work just as well for this exact demo. 
+    /// A real delegating handler would typically do something like:
+    ///    1. perform logic against rhe request
+    ///    2. call base.SendAsync
+    ///    3. perform additional logic against the response
+    ///    4. return to caller
+    /// </summary>
     internal class CustomerErrorMockHandler : DelegatingHandler
     {
         private int _failures;
@@ -37,7 +46,7 @@ namespace DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers
                 };
             }
 
-            // todo: figure out how to re-use CustomerSuccessMockHandler (wouldn't let me use it w/ HttpClientBuilder)
+            // todo: figure out how to re-use CustomerSuccessMockHandler - was trying to use it as an InnerHandler but it wouldn't work
             var mockCustomer = new CustomerModel
             {
                 CustomerId = 1,

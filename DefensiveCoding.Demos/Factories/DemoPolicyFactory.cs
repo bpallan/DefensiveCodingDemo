@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using DefensiveCoding.Demos.Helpers;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
+using DefensiveCoding.Demos.Helpers;
 using Polly;
 using Polly.Extensions.Http;
 using Polly.Timeout;
@@ -14,7 +12,8 @@ using Polly.Timeout;
 namespace DefensiveCoding.Demos.Factories
 {
     /// <summary>
-    /// demoware, should make these much more configurable
+    /// An example of how you might return policies using a factory
+    /// Note:  For demo, a real implementation would allow for policy settings to be tweaked and customer delegates to be defined.
     /// </summary>
     internal static class DemoPolicyFactory
     {

@@ -1,19 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using DefensiveCoding.Demos.Extensions;
 using DefensiveCoding.Demos.Factories;
 using DefensiveCoding.Demos.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Polly;
 using Polly.CircuitBreaker;
-using Polly.Extensions.Http;
-using Polly.Timeout;
 
 namespace DefensiveCoding.Demos._06_HttpClientFactory
 {

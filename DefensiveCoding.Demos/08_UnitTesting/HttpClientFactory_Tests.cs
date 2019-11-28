@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
-using DefensiveCoding.Demos.Extensions;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers;
+using DefensiveCoding.Demos.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -15,6 +13,12 @@ using Polly.CircuitBreaker;
 
 namespace DefensiveCoding.Demos._08_UnitTesting
 {
+    /// <summary>
+    /// Demo how to test policies that are applied to a HttpClientFactory implementation
+    /// This is the best practice for .net core applications
+    /// Note:  These demos are fully self contained and do not rely on any external dependencies
+    /// Unlike the other demos, we are using mock handlers to simulate results instead of calling an actual api
+    /// </summary>
     [TestClass]
     public class HttpClientFactory_Tests
     {
@@ -49,7 +53,7 @@ namespace DefensiveCoding.Demos._08_UnitTesting
         /// <summary>
         /// Test policies w/out worrying about the code consuming them
         /// Add policies to HttpClientFactory via extension method.  Test client directly using mock handler to simulate faults.
-        /// Note:  For demo we are only testing retry to prove policies are being applied
+        /// Note:  Only testing retry and fallback.  In a real example you should test all possible responses.
         /// </summary>
         /// <returns></returns>
         [TestMethod]

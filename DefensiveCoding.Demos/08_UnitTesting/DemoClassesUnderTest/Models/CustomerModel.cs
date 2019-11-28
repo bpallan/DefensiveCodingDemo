@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models
+﻿namespace DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models
 {
+    /// <summary>
+    /// Simplified customer model for demo
+    /// In a real example, Message would probably be in some kind of response wrapper
+    /// </summary>
     internal class CustomerModel
     {
         public int CustomerId { get; set; }

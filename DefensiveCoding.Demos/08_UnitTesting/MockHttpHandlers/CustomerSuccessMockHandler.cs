@@ -10,6 +10,10 @@ using Newtonsoft.Json;
 
 namespace DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers
 {
+    /// <summary>
+    /// Return mock data when a caller makes a http call
+    /// Unless you want to create 1 of these per test, a real mock handler for returning data would need to be significanly more robust
+    /// </summary>
     internal class CustomerSuccessMockHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

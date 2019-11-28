@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Interfaces;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using Polly;
 
 namespace DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest
 {
+    /// <summary>
+    /// Demo class that simulates wrapping a repository call with a resiliency policy
+    /// Note: This class is demoware.  A real example would likely have a lot more logic and be more valuable to test than this is.
+    /// </summary>
     internal class CustomerService_Database
     {
         private readonly ICustomerRepository _customerRepository;

@@ -1,21 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+﻿using System.Diagnostics;
 using System.Threading.Tasks;
-using DefensiveCoding.Demos.Factories;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Interfaces;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
+using DefensiveCoding.Demos.Factories;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Polly;
 
 namespace DefensiveCoding.Demos._08_UnitTesting
 {
+    /// <summary>
+    /// Demo testing policies that wrap code directly (instead of using HttpClientFactory)
+    /// Examples might be database or cache calls, wcf service calls, or even http calls if working in legacy .net framework code
+    /// </summary>
     [TestClass]
     public class WrappedDependency_Tests
     {
+        /// <summary>
+        /// Demo testing the original code w/out any policies interfering with the results
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task WrappedDependency_TestCodeSeperateWithoutPolicies()
         {
@@ -42,6 +47,11 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             Assert.AreEqual(testCustomer.Email, customer.Email);
         }
 
+        /// <summary>
+        /// Demo testing the policies w/out worry about what code is being wrapped
+        /// Note: we are only verifying timeout and fallback in this demo.  All possible responses should be mocked/handled
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task WrappedDependency_TestPoliciesSeperateFromCode()
         {
@@ -51,6 +61,8 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             // act
             var sw = new Stopwatch();
             sw.Start();
+
+            // simulate a slow call (should timeout and return default)
             var customer = await resiliencyPolicy.ExecuteAsync(async () =>
             {
                 await Task.Delay(10000);
@@ -68,6 +80,12 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             Assert.IsTrue(sw.ElapsedMilliseconds < 10000);
         }
 
+        /// <summary>
+        /// Demo testing both the policies and code together.  
+        /// Likely the most valueable since they confirm the policies work as expected and the code handles the results of them as it should.
+        /// Only testing timeout and fallback.  All possible responses should be handled.  
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task WrappedDependency_TestPoliciesWithCode()
         {
