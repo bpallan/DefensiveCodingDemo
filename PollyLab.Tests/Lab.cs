@@ -15,7 +15,8 @@ namespace PollyLab.Before.Tests
 {
     /// <summary>
     /// The goal is to send 100 valid customers to the api in less than 1 minute.
-    /// YOU ARE ONLY ALLOWED TO MODIFY THIS CLASS 
+    /// The api is omnipotent so sending the same customer multiple times in the case of a timeout won't create duplicates
+    /// YOU ARE ONLY ALLOWED TO MODIFY THIS CLASS     
     /// </summary>
     public static class Lab
     {
