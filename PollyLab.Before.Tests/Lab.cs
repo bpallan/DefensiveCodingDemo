@@ -11,11 +11,16 @@ namespace PollyLab.Before.Tests
         public void ExecuteLab()
         {
             // create 100 customers
-            var customerList = CustomerFactory.CreateCustomers(100).ToList();
+            var customerQueue = CustomerFactory.CreateCustomerQueue(100);
 
             // send to api
+            while (customerQueue.Count > 0)
+            {
+                var customer = customerQueue.Dequeue();
+            }
 
             // verify all customers received
+            Assert.AreEqual(0, customerQueue.Count);
         }
     }
 }
