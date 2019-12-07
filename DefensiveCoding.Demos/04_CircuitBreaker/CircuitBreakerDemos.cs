@@ -82,7 +82,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                 }
                 catch
                 {
-                    // ignored
+                    // ignored to keep the demo going
                 }
             }
 
@@ -101,7 +101,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
             }
             catch 
             {
-                // ignored
+                // ignored to keep the demo going
             }
 
             Assert.AreEqual(CircuitState.Open, policy.CircuitState);
@@ -153,7 +153,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                 }
                 catch
                 {
-                    // ignore
+                    // ignored to keep the demo going
                 }
             }
 
