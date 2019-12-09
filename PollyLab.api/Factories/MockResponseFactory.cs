@@ -16,13 +16,14 @@ namespace PollyLab.Api.Factories
         {
             _responses.Add(new HealthyResponse());
             _responses.Add(new TransientErrorResponse());
+            _responses.Add(new HealthyResponse());
+            _responses.Add(new ServiceUnavailableResponse());
         }
 
         public static IMockResponse Create()
         {
-            // demo doesn't run in parralel but lock just in case (this isn't optimized)
-            int localIndex;
-
+            // wrapping in a lock to prevent concurrency issues
+            // this is NOT performant but fine for this demo        
             lock (_lock)
             {
                 _currentResponseIndex++;
@@ -32,10 +33,22 @@ namespace PollyLab.Api.Factories
                     _currentResponseIndex = 0;
                 }
 
-                localIndex = _currentResponseIndex;
-            }
+                var response = _responses[_currentResponseIndex];
 
-            return _responses[localIndex];
+                if (response is ServiceUnavailableResponse)
+                {
+                    if (response.ShouldApply())
+                    {
+                        _currentResponseIndex--; // keep returning this until they stop calling service for a while
+                    }
+                    else
+                    {
+                        _responses.Remove(response);
+                    }
+                }
+
+                return response;
+            }
         }
     }
 }

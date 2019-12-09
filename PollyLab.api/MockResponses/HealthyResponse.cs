@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PollyLab.Api.Enums;
 
 namespace PollyLab.Api.MockResponses
 {
@@ -16,9 +17,9 @@ namespace PollyLab.Api.MockResponses
             return true;
         }
 
-        public HttpResponseMessage Execute()
+        public ApiStates Execute()
         {
-            return new HttpResponseMessage(HttpStatusCode.Created);
+            return ApiStates.Healthy;
         }
     }
 }

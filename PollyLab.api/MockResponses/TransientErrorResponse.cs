@@ -4,19 +4,20 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using PollyLab.Api.Enums;
 
 namespace PollyLab.Api.MockResponses
 {
-    public class TransientErrorResponse : IMockResponse
+    internal class TransientErrorResponse : IMockResponse
     {
         public bool ShouldApply()
         {
             return true;
         }
 
-        public HttpResponseMessage Execute()
+        public ApiStates Execute()
         {
-            return new HttpResponseMessage() { StatusCode = HttpStatusCode.InternalServerError};
+            return ApiStates.TransientError;
         }
     }
 }

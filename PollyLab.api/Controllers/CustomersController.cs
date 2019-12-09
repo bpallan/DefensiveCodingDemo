@@ -2,8 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using Microsoft.AspNetCore.Mvc;
+using PollyLab.Api.Enums;
 using PollyLab.Api.Factories;
 using PollyLab.Api.MockResponses;
 using PollyLab.Helpers.Contracts;
@@ -22,7 +24,7 @@ namespace PollyLab.Api.Controllers
         }
 
         [HttpPost]
-        public HttpResponseMessage Post([FromBody] Customer customerToSave)
+        public ActionResult Post([FromBody] Customer customerToSave)
         {
             var response = MockResponseFactory.Create();
 
@@ -31,14 +33,21 @@ namespace PollyLab.Api.Controllers
                 response = MockResponseFactory.Create();
             }
 
-            var responseMessage = response.Execute();
+            var apiState = response.Execute();
 
-            if (responseMessage.IsSuccessStatusCode)
+            switch (apiState)
             {
-                _savedCustomers.TryAdd(customerToSave.CustomerId, customerToSave);
+                case ApiStates.Healthy:
+                case ApiStates.Slow:
+                    _savedCustomers.TryAdd(customerToSave.CustomerId, customerToSave);
+                    return Ok();
+                case ApiStates.TransientError:
+                    return StatusCode(500);
+                case ApiStates.Down:
+                    return StatusCode(503);
             }
 
-            return responseMessage;
+            throw new InvalidOperationException("Unknown api state"); // should never get here
         }
     }
 }
