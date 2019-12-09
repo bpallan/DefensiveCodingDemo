@@ -15,7 +15,12 @@ namespace PollyLab.Api.Factories
         static MockResponseFactory()
         {
             _responses.Add(new HealthyResponse());
+            _responses.Add(new HealthyResponse());
             _responses.Add(new TransientErrorResponse());
+            _responses.Add(new HealthyResponse());
+            _responses.Add(new HealthyResponse());
+            _responses.Add(new SlowResponse());
+            _responses.Add(new HealthyResponse());
             _responses.Add(new HealthyResponse());
             _responses.Add(new ServiceUnavailableResponse());
         }

@@ -18,9 +18,5 @@ namespace PollyLab.Api.Enums
 
         // keep returning errors until you go 30 seconds w/out a request
         Down = 3,
-
-        // token has expired, return a 401
-        // keep returning a 401 until a new token is provided
-        UnAuthorized = 4,
     }
 }
