@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.AspNetCore;
+﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PollyLab.Api;
 
-namespace PollyLab.Before.Tests.Initialize
+namespace PollyLab.After.Initialize
 {
     [TestClass]
     public class Initialize
