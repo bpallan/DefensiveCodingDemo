@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using Polly;
 using PollyLab.Helpers.Contracts;
 using PollyLab.Helpers.Factories;
 
@@ -17,6 +18,7 @@ namespace PollyLab.Before.Tests
     /// <summary>
     /// The goal is to send 100 valid customers to the api in less than 1 minute.
     /// The api is omnipotent so sending the same customer multiple times in the case of a timeout won't create duplicates
+    /// Microsoft.Extensions.Http.Polly has already been installed (required to use Context below)
     /// YOU ARE ONLY ALLOWED TO MODIFY THIS CLASS     
     /// </summary>
     public static class Lab
@@ -65,22 +67,26 @@ namespace PollyLab.Before.Tests
             sw.Start();
 
             // send to api
-            try
+            while (_customerQueue.Count > 0 && !outOfTimeToken.IsCancellationRequested)
             {
-                while (_customerQueue.Count > 0)
+                var customer = _customerQueue.Dequeue();
+                var context = new Polly.Context();
+                context["Customer"] = customer;
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "api/lab/customers");
+                request.SetPolicyExecutionContext(context);
+                request.Content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8,
+                    "application/json");
+
+                try
                 {
-                    var customer = _customerQueue.Dequeue();
-                    var content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8,
-                        "application/json");
-                    var response = await client.PostAsync("api/lab/customers", content, outOfTimeToken.Token);
+                    var response = await client.SendAsync(request, outOfTimeToken.Token);
                     await Console.Out.WriteLineAsync($"{sw.ElapsedMilliseconds:N}ms - {response.StatusCode}");
                 }
+                catch (Exception e)
+                {
+                    break; // abort test on exception
+                }
             }
-            catch (TaskCanceledException e)
-            {
-                Assert.Fail("Test took longer than 60 seconds!");
-            }
-
 
             sw.Stop();
 
@@ -88,9 +94,9 @@ namespace PollyLab.Before.Tests
             var verifyClient = clientFactory.CreateClient("VerificationService");
             var verifyResponse = await verifyClient.GetAsync("api/lab/customers");
             var json = await verifyResponse.Content.ReadAsStringAsync();
-            var customerList = JsonConvert.DeserializeObject<List<Customer>>(json);
+            var savedCustomerList = JsonConvert.DeserializeObject<List<Customer>>(json);
             Assert.AreEqual(0, _customerQueue.Count);
-            Assert.AreEqual(100, customerList.Select(x => x.CustomerId).Distinct().Count());
+            Assert.AreEqual(100, savedCustomerList.Select(x => x.CustomerId).Distinct().Count());
             Assert.IsTrue(sw.ElapsedMilliseconds < 60000);
         }
     }

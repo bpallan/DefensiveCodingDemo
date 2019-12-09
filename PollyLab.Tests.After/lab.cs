@@ -41,6 +41,7 @@ namespace PollyLab.Tests.After
                     return Task.FromResult(result.Result ?? new HttpResponseMessage() { StatusCode = HttpStatusCode.ServiceUnavailable}); // Result null if exception, so need to return something.
                 }, onFallbackAsync: (exception, context) =>
                 {
+                    // log something
                     return Task.CompletedTask;
                 }));
 
