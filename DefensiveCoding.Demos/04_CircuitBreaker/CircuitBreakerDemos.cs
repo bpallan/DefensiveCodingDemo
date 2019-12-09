@@ -82,7 +82,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                 }
                 catch
                 {
-                    // ignored
+                    // ignored to keep the demo going
                 }
             }
 
@@ -91,7 +91,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
 
 
             // circuit breaker will transition to 1/2 open state after 5 seconds
-            await Task.Delay(5000);            
+            await Task.Delay(6000);            
             Assert.AreEqual(CircuitState.HalfOpen, policy.CircuitState);            
 
             // if first request fails while 1/2 open, it will open back up for the 5 seconds
@@ -101,13 +101,13 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
             }
             catch 
             {
-                // ignored
+                // ignored to keep the demo going
             }
 
             Assert.AreEqual(CircuitState.Open, policy.CircuitState);
 
-            // wait another 5 seconds to get back to 1/2 open
-            await Task.Delay(5000);
+            // wait at least 5 seconds to get back to 1/2 open
+            await Task.Delay(6000);
             Assert.AreEqual(CircuitState.HalfOpen, policy.CircuitState);
 
             // make a successful request
@@ -153,7 +153,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                 }
                 catch
                 {
-                    // ignore
+                    // ignored to keep the demo going
                 }
             }
 
