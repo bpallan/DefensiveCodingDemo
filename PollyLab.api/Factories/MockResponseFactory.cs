@@ -9,28 +9,27 @@ namespace PollyLab.Api.Factories
     internal static class MockResponseFactory
     {
         private static readonly List<IMockResponse> _responses = new List<IMockResponse>();
-        private static int _currentResponseIndex = 0;
-        private static object _lock;
+        private static int _currentResponseIndex = -1;
+        private static object _lock = new object();
 
         static MockResponseFactory()
         {
             _responses.Add(new HealthyResponse());
+            _responses.Add(new TransientErrorResponse());
         }
 
         public static IMockResponse Create()
         {
-            // demo doesn't run in parralel but just in case
+            // demo doesn't run in parralel but lock just in case (this isn't optimized)
             int localIndex;
 
             lock (_lock)
             {
+                _currentResponseIndex++;
+
                 if (_currentResponseIndex >= _responses.Count)
                 {
                     _currentResponseIndex = 0;
-                }
-                else
-                {
-                    _currentResponseIndex++;
                 }
 
                 localIndex = _currentResponseIndex;

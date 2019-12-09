@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -41,13 +42,16 @@ namespace PollyLab.Before.Tests
         public VerifyLab()
         {
             _services.AddHttpClient("CustomerService",
-                client => { client.BaseAddress = new Uri("http://localhost:5002/"); })
+                    client => { client.BaseAddress = new Uri("http://localhost:5002/"); })
                 .AddResiliency(_customerQueue);
 
             _services.AddHttpClient("VerificationService",
-                client => { client.BaseAddress = new Uri("http://localhost:5002/"); }); // ensure bad policies/etc don't stop our ability to verify
+                client =>
+                {
+                    client.BaseAddress = new Uri("http://localhost:5002/");
+                }); // ensure bad policies/etc don't stop our ability to verify
         }
-        
+
         [TestMethod]
         public async Task ExecuteLab()
         {
@@ -55,22 +59,35 @@ namespace PollyLab.Before.Tests
             var clientFactory = serviceProvider.GetService<IHttpClientFactory>();
             var client = clientFactory.CreateClient("CustomerService");
 
-            // send to api
+            // setup timers/cancellation token
+            var outOfTimeToken = new CancellationTokenSource(60000);
             var sw = new Stopwatch();
             sw.Start();
-            while (_customerQueue.Count > 0)
+
+            // send to api
+            try
             {
-                var customer = _customerQueue.Dequeue();
-                var content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8, "application/json");
-                await client.PostAsync("api/lab/customers", content);
+                while (_customerQueue.Count > 0)
+                {
+                    var customer = _customerQueue.Dequeue();
+                    var content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8,
+                        "application/json");
+                    var response = await client.PostAsync("api/lab/customers", content, outOfTimeToken.Token);
+                    await Console.Out.WriteLineAsync($"{sw.ElapsedMilliseconds:N}ms - {response.StatusCode}");
+                }
             }
+            catch (TaskCanceledException e)
+            {
+                Assert.Fail("Test took longer than 60 seconds!");
+            }
+
 
             sw.Stop();
 
             // verify all customers received
             var verifyClient = clientFactory.CreateClient("VerificationService");
-            var response = await verifyClient.GetAsync("api/lab/customers");
-            var json = await response.Content.ReadAsStringAsync();
+            var verifyResponse = await verifyClient.GetAsync("api/lab/customers");
+            var json = await verifyResponse.Content.ReadAsStringAsync();
             var customerList = JsonConvert.DeserializeObject<List<Customer>>(json);
             Assert.AreEqual(0, _customerQueue.Count);
             Assert.AreEqual(100, customerList.Select(x => x.CustomerId).Distinct().Count());

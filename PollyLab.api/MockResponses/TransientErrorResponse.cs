@@ -4,12 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 
 namespace PollyLab.Api.MockResponses
 {
-    internal class HealthyResponse : IMockResponse
+    public class TransientErrorResponse : IMockResponse
     {
         public bool ShouldApply()
         {
@@ -18,7 +16,7 @@ namespace PollyLab.Api.MockResponses
 
         public HttpResponseMessage Execute()
         {
-            return new HttpResponseMessage(HttpStatusCode.Created);
+            return new HttpResponseMessage() { StatusCode = HttpStatusCode.InternalServerError};
         }
     }
 }
