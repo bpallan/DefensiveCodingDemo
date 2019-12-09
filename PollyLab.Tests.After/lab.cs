@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -9,6 +10,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using Polly;
+using Polly.Extensions.Http;
+using Polly.Timeout;
 using PollyLab.Helpers.Contracts;
 using PollyLab.Helpers.Factories;
 
@@ -25,7 +29,38 @@ namespace PollyLab.Tests.After
         {
             /// LAB WORK GOES HERE ///
 
+            // use DemoPolicyFactory as example
+            // 1. add fallback policy to requeue customers
+            builder.AddPolicyHandler(Policy
+                .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // catch any bad responses, transient or not         
+                .Or<Exception>() // handle ANY exception we get back
+                .FallbackAsync(fallbackAction: (result, context, ct) =>
+                {
+                    var customer = context["Customer"];
+                    customerQueue.Enqueue((Customer)customer);
+                    return Task.FromResult(result.Result ?? new HttpResponseMessage() { StatusCode = HttpStatusCode.ServiceUnavailable}); // Result null if exception, so need to return something.
+                }, onFallbackAsync: (exception, context) =>
+                {
+                    return Task.CompletedTask;
+                }));
+
+            // 2. OPTIONAL: add retry policy (not really needed since we are using a queue and re-adding on failure)
+            builder.AddPolicyHandler(HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .Or<TimeoutRejectedException>() // handle timeouts as failures so they get retried, decide if this is appropriate for your use case
+                .RetryAsync(1));
+
+            // 3. add circuit breaker to allow service to recover
+            builder.AddPolicyHandler(HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .Or<TimeoutRejectedException>()
+                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
+
+            // 4. add timeout policy so we don't wait on slow calls
+            builder.AddPolicyHandler(Policy
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic));
         }
+
     }
 
     /// <summary>
@@ -65,22 +100,26 @@ namespace PollyLab.Tests.After
             sw.Start();
 
             // send to api
-            try
+            while (_customerQueue.Count > 0 && !outOfTimeToken.IsCancellationRequested)
             {
-                while (_customerQueue.Count > 0)
+                var customer = _customerQueue.Dequeue();
+                var context = new Polly.Context();
+                context["Customer"] = customer;
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "api/lab/customers");
+                request.SetPolicyExecutionContext(context);
+                request.Content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8,
+                    "application/json");
+
+                try
                 {
-                    var customer = _customerQueue.Dequeue();
-                    var content = new StringContent(JsonConvert.SerializeObject(customer), Encoding.UTF8,
-                        "application/json");
-                    var response = await client.PostAsync("api/lab/customers", content, outOfTimeToken.Token);
+                    var response = await client.SendAsync(request, outOfTimeToken.Token);
                     await Console.Out.WriteLineAsync($"{sw.ElapsedMilliseconds:N}ms - {response.StatusCode}");
                 }
+                catch (Exception e)
+                {
+                    break; // abort test on exception
+                }                                
             }
-            catch (TaskCanceledException e)
-            {
-                Assert.Fail("Test took longer than 60 seconds!");
-            }
-
 
             sw.Stop();
 
@@ -88,9 +127,9 @@ namespace PollyLab.Tests.After
             var verifyClient = clientFactory.CreateClient("VerificationService");
             var verifyResponse = await verifyClient.GetAsync("api/lab/customers");
             var json = await verifyResponse.Content.ReadAsStringAsync();
-            var customerList = JsonConvert.DeserializeObject<List<Customer>>(json);
+            var savedCustomerList = JsonConvert.DeserializeObject<List<Customer>>(json);
             Assert.AreEqual(0, _customerQueue.Count);
-            Assert.AreEqual(100, customerList.Select(x => x.CustomerId).Distinct().Count());
+            Assert.AreEqual(100, savedCustomerList.Select(x => x.CustomerId).Distinct().Count());
             Assert.IsTrue(sw.ElapsedMilliseconds < 60000);
         }
     }
