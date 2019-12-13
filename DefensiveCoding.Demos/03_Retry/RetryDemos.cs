@@ -28,7 +28,7 @@ namespace DefensiveCoding.Demos._03_Retry
         {
             var policy = Policy
                 .Handle<HttpRequestException>()
-                .RetryAsync(1); // todo: figure out why standard logging helper doesn't work for this 1 instance
+                .RetryAsync(1); 
 
             var result = await policy.ExecuteAsync(async() =>
             {

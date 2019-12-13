@@ -21,12 +21,20 @@ namespace DefensiveCoding.Demos._01_Fallback
         /// <returns></returns>
         [TestMethod]
         public async Task HandleAnyException()
-        {
+        {            
+            // create policy
             var fallBackPolicy = Policy<string>
                 .Handle<Exception>()
                 .FallbackAsync<string>("Default!", onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
 
-            var result = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetStringAsync("api/demo/error"));
+            // create context
+            // you can put ANY object in your context that you need for logging or peforming any other actions in your policies
+            // for demo I am setting the default value, but this could be an id, a full customer data model, etc.
+            var context = new Polly.Context();
+            context["DefaultValue"] = "Default!";
+
+            // execute code wrapped in policy
+            var result = await fallBackPolicy.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetStringAsync("api/demo/error"), context);
 
             Assert.AreEqual("Default!", result);
         }
@@ -40,14 +48,20 @@ namespace DefensiveCoding.Demos._01_Fallback
         [TestMethod]
         public async Task HandleHttpErrorResponses()
         {
+            // crate policy
             var fallBackPolicy = Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode)
                 .FallbackAsync(FallbackAction, PolicyLoggingHelper.LogFallbackAsync);
 
+            // setup context
+            var context = new Polly.Context();
+            context["DefaultValue"] = "Default2!";
+
+            // execute code wrappe din policy
             var response = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error"));
             var content = await response.Content.ReadAsStringAsync();
 
-            Assert.AreEqual("Default!", content);
+            Assert.AreEqual("Default2!", content);
         }
 
         // demonstrate returning a mock response
@@ -57,7 +71,7 @@ namespace DefensiveCoding.Demos._01_Fallback
             // you can pass in responseToFailedRequest.Result.StatusCode if you want to preserve the original error response code
             HttpResponseMessage httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK)        
             {
-                Content = new StringContent("Default!")
+                Content = new StringContent((string)context["DefaultValue"])
             };
             return Task.FromResult(httpResponseMessage);
         }        
