@@ -58,7 +58,7 @@ namespace DefensiveCoding.Demos._01_Fallback
             context["DefaultValue"] = "Default2!";
 
             // execute code wrappe din policy
-            var response = await fallBackPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error"));
+            var response = await fallBackPolicy.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/error"), context);
             var content = await response.Content.ReadAsStringAsync();
 
             Assert.AreEqual("Default2!", content);
