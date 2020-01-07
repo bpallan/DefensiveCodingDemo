@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -20,22 +21,38 @@ namespace DefensiveCoding.Demos._01_Fallback
         /// </summary>
         /// <returns></returns>
         [TestMethod]
-        public async Task HandleAnyException()
+        public async Task HandleSingleException()
         {            
             // create policy
             var fallBackPolicy = Policy<string>
-                .Handle<Exception>()
-                .FallbackAsync<string>("Default!", onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
+                .Handle<HttpRequestException>()
+                .FallbackAsync<string>((ctx, ct) => Task.FromResult((string) ctx["DefaultValue"]), onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
 
             // create context
-            // you can put ANY object in your context that you need for logging or peforming any other actions in your policies
+            // you can put ANY object in your context that you need for logging or performing any other actions in your policies
             // for demo I am setting the default value, but this could be an id, a full customer data model, etc.
-            var context = new Polly.Context();
-            context["DefaultValue"] = "Default!";
+            var context = new Polly.Context {["DefaultValue"] = "Default!"};
 
             // execute code wrapped in policy
             var result = await fallBackPolicy.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetStringAsync("api/demo/error"), context);
 
+            Assert.AreEqual("Default!", result);
+        }
+        
+        /// <summary>
+        /// Simple example of checking an error number and returning a default value.
+        /// This is showing a sync code example and not logging (since example logger is async only)
+        /// </summary>
+        [TestMethod]
+        public void HandleExceptionTypeWithCondition()
+        {
+            // check for a specific type of exception and error number
+            var fallBackPolicy = Policy<string>
+                .Handle<TestException>(ex => ex.Number == 1205)
+                .Fallback<string>("Default!");
+
+            var result = fallBackPolicy.Execute(QueryData);
+            
             Assert.AreEqual("Default!", result);
         }
 
@@ -74,6 +91,19 @@ namespace DefensiveCoding.Demos._01_Fallback
                 Content = new StringContent((string)context["DefaultValue"])
             };
             return Task.FromResult(httpResponseMessage);
-        }        
+        }
+
+        private string QueryData()
+        {
+            throw new TestException()
+            {
+                Number = 1205
+            };
+        }
+        
+        private class TestException : Exception
+        {
+            public int Number { get; set; }
+        }
     }
 }
