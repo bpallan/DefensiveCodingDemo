@@ -152,7 +152,7 @@ namespace DefensiveCoding.Demos._03_Retry
             {
                 await policy.ExecuteAsync(() => DemoHelper.DemoClient.SendAsync(request));
             }
-            catch (InvalidOperationException ex)
+            catch (InvalidOperationException)
             {
                 isInvalidOperationException = true;
             }            
@@ -184,7 +184,7 @@ namespace DefensiveCoding.Demos._03_Retry
             {
                 await policy.ExecuteAsync(() => client.GetAsync("api/demo/slow?failures=1"));
             }
-            catch (TaskCanceledException ex)
+            catch (TaskCanceledException)
             {
                 isTimeoutException = true;
             }                        

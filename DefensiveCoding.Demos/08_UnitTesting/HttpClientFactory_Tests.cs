@@ -5,6 +5,7 @@ using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using DefensiveCoding.Demos._08_UnitTesting.MockHttpHandlers;
 using DefensiveCoding.Demos.Extensions;
+using DefensiveCoding.Demos.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -132,6 +133,12 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             {
                 Message = "Customer Is Not Available."
             };
+        }
+        
+        [TestCleanup]
+        public void Cleanup()
+        {
+            DemoHelper.Reset();
         }
     }
 }

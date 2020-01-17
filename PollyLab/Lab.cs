@@ -82,7 +82,7 @@ namespace PollyLab
                     var response = await client.SendAsync(request, outOfTimeToken.Token);
                     await Console.Out.WriteLineAsync($"{sw.ElapsedMilliseconds:N}ms - {response.StatusCode}");
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     break; // abort test on exception
                 }

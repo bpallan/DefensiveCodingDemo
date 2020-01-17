@@ -154,5 +154,11 @@ namespace DefensiveCoding.Demos._01_Fallback
         {
             public int Number { get; set; }
         }
+        
+        [TestCleanup]
+        public void Cleanup()
+        {
+            DemoHelper.Reset();
+        }
     }
 }
