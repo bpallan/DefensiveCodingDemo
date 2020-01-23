@@ -21,26 +21,13 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
     {
         /// <summary>
         /// Demonstrate adding a full range of policies for Http Calls
+        /// Also demonstrating that a wrapped policy can be wrapped inside other policies
         /// Fallback -> Outer Timeout -> Retry -> Circuit Breaker -> Inner Timeout -> Client Call
         /// </summary>
         /// <returns></returns>
         [TestMethod]
         public async Task AddResiliencyToHttpCall()
         {
-            // todo: figure out good information to add to context
-
-            ///////////////////////// FALLBACK POLICY /////////////////////////
-            // alternative would be to wrap ExecuteAsync in try/catch and return default from there
-            IAsyncPolicy<HttpResponseMessage> fallbackPolicy = HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .Or<TimeoutRejectedException>()
-                .Or<BrokenCircuitException>()
-                .FallbackAsync(new HttpResponseMessage
-                {                   
-                    // fetch default values or execue whatever behavior you want to fall back to
-                    Content = new StringContent("Default!")
-                }, onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync);
-
             ///////////////////////// OUTER TIMEOUT POLICY /////////////////////////
             // for sync code, you should replace this by setting the timeout on the HttpClient
             IAsyncPolicy<HttpResponseMessage> outerTimeoutPolicy = Policy
@@ -57,7 +44,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                     onRetryAsync: PolicyLoggingHelper.LogWaitAndRetryAsync);
 
             ///////////////////////// CIRCUIT BREAKER POLICY /////////////////////////
-            // tyical duration of break should be 30-60 seconds.  Using 5 for this demo to make demo run faster
+            // typical duration of break should be 30-60 seconds.  Using 5 for this demo to make demo run faster
             IAsyncPolicy<HttpResponseMessage> circuitBreakerAsyncPolicy = Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // consider if you want to ignore 404s
                 .Or<Exception>()
@@ -78,27 +65,42 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
 
             ///////////////////////// POLICY WRAP /////////////////////////
             // wrap policies from outer to inner
-            var resiliencyPolicy = Policy
-                .WrapAsync<HttpResponseMessage>(fallbackPolicy, outerTimeoutPolicy, retryPolicy, circuitBreakerAsyncPolicy, innerTimeoutPolicy);
+            var commonResiliencyPolicy = Policy
+                .WrapAsync<HttpResponseMessage>(outerTimeoutPolicy, retryPolicy, circuitBreakerAsyncPolicy, innerTimeoutPolicy);
+            
+            ///////////////////////// FALLBACK POLICY (Wraps wrapped policy) /////////////////////////
+            // alternative would be to wrap ExecuteAsync in try/catch and return default from there
+            // I am wrapping the above resiliency policy to show that you can wrap a wrapped policy inside another policy
+            // Fallback is a good use case for this since it can vary a lot between different calls
+            IAsyncPolicy<HttpResponseMessage> resiliencyPolicyWithFallback = HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .Or<TimeoutRejectedException>()
+                .Or<BrokenCircuitException>()
+                .FallbackAsync(new HttpResponseMessage
+                {
+                    // fetch default values or execute whatever behavior you want to fall back to
+                    Content = new StringContent("Default!")
+                }, onFallbackAsync: PolicyLoggingHelper.LogFallbackAsync)
+                .WrapAsync(commonResiliencyPolicy);
 
             // verify retry on error
-            var response = await resiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
+            var response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify retry on client timeout           
-            response = await resiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", CancellationToken.None));
+            response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", CancellationToken.None));
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify default if every call times out
             DemoHelper.Reset();
-            response = await resiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow", CancellationToken.None)); 
+            response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow", CancellationToken.None)); 
             var result = await response.Content.ReadAsStringAsync();
             Assert.AreEqual("Default!", result);
 
             // verify circuit broken on errors    
             for (int i = 0; i < 6; i++)
             {
-                response = await resiliencyPolicy.ExecuteAsync(() =>
+                response = await resiliencyPolicyWithFallback.ExecuteAsync(() =>
                     DemoHelper.DemoClient.GetAsync("api/demo/error", CancellationToken.None));
                 result = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual("Default!", result);
@@ -111,12 +113,12 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             Assert.AreEqual(CircuitState.HalfOpen, circuitBreaker.CircuitState);
 
             // verify circuit breaker is back open
-            await resiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/success"));
+            await commonResiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/success"));
             Assert.AreEqual(CircuitState.Closed, circuitBreaker.CircuitState);
         }        
 
         /// <summary>
-        /// Demonstate using retry and circuit breaker policies to get a new token on an unauthorized (401) response
+        ///Demonstrate using retry and circuit breaker policies to get a new token on an unauthorized (401) response
         /// Circuit breaker should always be used so we don't beat up the auth server if we have mis-matched credentials       
         /// </summary>
         /// <returns></returns>
@@ -167,7 +169,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
         }
 
         /// <summary>
-        /// Demonstate applying multiple policies for non-http calls
+        /// Demonstrate applying multiple policies for non-http calls
         /// WCF, Database, Cache, another others
         /// Main difference is you have to be more exception based then response based
         /// You also want to avoid retrying database or cache calls as that can make the problem worse
