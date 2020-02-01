@@ -9,7 +9,7 @@ using Polly.Caching.Memory;
 namespace DefensiveCoding.Demos._09_Other
 {
     [TestClass]
-    public class CacheDemo
+    public class CacheDemos
     {
         /// <summary>
         /// Demonstrate using the cache policy

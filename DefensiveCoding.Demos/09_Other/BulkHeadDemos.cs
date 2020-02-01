@@ -9,13 +9,13 @@ using Polly.Bulkhead;
 namespace DefensiveCoding.Demos._09_Other
 {
     [TestClass]
-    public class BulkHead_Demos
+    public class BulkHeadDemos
     {
         private List<int> _testData = new List<int>();
         private ConcurrentBag<int> _processed = new ConcurrentBag<int>();
         private ConcurrentBag<int> _rejected = new ConcurrentBag<int>();
 
-        public BulkHead_Demos()
+        public BulkHeadDemos()
         {
             for (int i = 0; i < 100; i++)
             {
