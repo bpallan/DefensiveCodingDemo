@@ -26,7 +26,7 @@ namespace DefensiveCoding.Demos._09_Other
             var result = await policy.ExecuteAndCaptureAsync(async () =>
             {
                 var response = await DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1");
-                response.EnsureSuccessStatusCode(); // exception won't be thrown if this isn't called
+                response.EnsureSuccessStatusCode(); 
                 return response;
             });
 
@@ -34,8 +34,13 @@ namespace DefensiveCoding.Demos._09_Other
             Assert.IsTrue(result.Result.IsSuccessStatusCode);
         }
 
+        /// <summary>
+        /// Demonstrate that when an exception is thrown inside the execute, it won't bubble out to the caller
+        /// Instead your policy result will have it in the FinalException field and result will be NULL
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
-        public async Task ExecuteAndCaptureFailuire()
+        public async Task ExecuteAndCaptureFailure()
         {
             var policy = Policy
                 .Handle<HttpRequestException>()
@@ -44,7 +49,7 @@ namespace DefensiveCoding.Demos._09_Other
             var result = await policy.ExecuteAndCaptureAsync(async () =>
             {
                 var response = await DemoHelper.DemoClient.GetAsync("api/demo/error");
-                response.EnsureSuccessStatusCode(); // exception won't be thrown if this isn't called
+                response.EnsureSuccessStatusCode(); 
                 return response;
             });
 
