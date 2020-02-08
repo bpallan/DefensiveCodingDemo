@@ -50,7 +50,8 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 .Or<Exception>()
                 .CircuitBreakerAsync(5, TimeSpan.FromSeconds(5), 
                     onBreak: PolicyLoggingHelper.LogCircuitBroken,
-                    onReset: PolicyLoggingHelper.LogCircuitReset);
+                    onReset: PolicyLoggingHelper.LogCircuitReset)
+                .WithPolicyKey(nameof(circuitBreakerAsyncPolicy));
 
             // pointer to the circuit breaker so we can read/update its state as needed (haven't figured out a better way to do this)
             // this is EXTREMELY useful for resetting between unit tests (expose a reset method to allow callers to reset your circuit breaker)
@@ -84,24 +85,24 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 .WrapAsync(commonResiliencyPolicy);
 
             // verify retry on error
-            var response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"));
+            var response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"), new Context($"{nameof(AddResiliencyToHttpCall)}_1"));
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify retry on client timeout           
-            response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", CancellationToken.None));
+            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_2"));
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify default if every call times out
             DemoHelper.Reset();
-            response = await resiliencyPolicyWithFallback.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/slow", CancellationToken.None)); 
+            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/slow", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_3")); 
             var result = await response.Content.ReadAsStringAsync();
             Assert.AreEqual("Default!", result);
 
             // verify circuit broken on errors    
             for (int i = 0; i < 6; i++)
             {
-                response = await resiliencyPolicyWithFallback.ExecuteAsync(() =>
-                    DemoHelper.DemoClient.GetAsync("api/demo/error", CancellationToken.None));
+                response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) =>
+                    DemoHelper.DemoClient.GetAsync("api/demo/error", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_4"));
                 result = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual("Default!", result);
             }
@@ -113,7 +114,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             Assert.AreEqual(CircuitState.HalfOpen, circuitBreaker.CircuitState);
 
             // verify circuit breaker is back open
-            await commonResiliencyPolicy.ExecuteAsync(() => DemoHelper.DemoClient.GetAsync("api/demo/success"));
+            await commonResiliencyPolicy.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/success"), new Context($"{nameof(AddResiliencyToHttpCall)}_5"));
             Assert.AreEqual(CircuitState.Closed, circuitBreaker.CircuitState);
         }        
 
@@ -153,16 +154,16 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
 
             // refresh token successfully
             var response =
-                await unauthorizedResiliencyPolicy.ExecuteAsync(() =>
-                    DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"));
+                await unauthorizedResiliencyPolicy.ExecuteAsync((ctx) =>
+                    DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"), new Context($"{nameof(RefreshTokenOnUnauthorized)}_1"));
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // simulate still getting 401 (ex. not in whitelist for api, using wrong scope, authority, etc)
             token = "MyBadToken";
             giveGoodToken = false;
 
-            response = await unauthorizedResiliencyPolicy.ExecuteAsync(() =>
-                DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"));
+            response = await unauthorizedResiliencyPolicy.ExecuteAsync((ctx) =>
+                DemoHelper.DemoClient.GetAsync($"api/demo/unauthorized?token={token}"), new Context($"{nameof(RefreshTokenOnUnauthorized)}_2"));
 
             Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
             Assert.AreEqual(CircuitState.Open, circuitBreaker401Policy.CircuitState);
@@ -198,22 +199,23 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 .WrapAsync<string>(fallBackPolicy, timeoutPolicy, retryPolicy, circuitBreakerPolicy);
 
             // verify retry
-            string result = await resiliencyPolicy.ExecuteAsync(UnreliableCall);
+            string result = await resiliencyPolicy.ExecuteAsync((ctx) => UnreliableCall(), new Context($"{nameof(AddResiliencyToNonHttpCall)}_1"));
             Assert.AreEqual("Success!", result);
 
             // verify timeout
-            result = await resiliencyPolicy.ExecuteAsync(SlowCall);
+            result = await resiliencyPolicy.ExecuteAsync((ctx) => SlowCall(), new Context($"{nameof(AddResiliencyToNonHttpCall)}_2"));
             Assert.AreEqual("Default!", result);
 
             // verify circuit breaker
             for (int i = 0; i < 5; i++)
             {
-                result = await resiliencyPolicy.ExecuteAsync(BrokenCall);
+                result = await resiliencyPolicy.ExecuteAsync((ctx) => BrokenCall(), new Context($"{nameof(AddResiliencyToNonHttpCall)}_3"));
             }
 
             Assert.AreEqual(CircuitState.Open, circuitBreakerPolicy.CircuitState);
             Assert.AreEqual("Default!", result);
         }        
+        
 
         ///////////////////////// HELPER FUNCTIONS FOR NON-HTTP DEMOS /////////////////////////
         private async Task<string> SlowCall()
