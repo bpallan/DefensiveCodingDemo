@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using DefensiveCoding.Demos.Extensions;
@@ -6,6 +7,7 @@ using DefensiveCoding.Demos.Factories;
 using DefensiveCoding.Demos.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Polly;
 using Polly.CircuitBreaker;
 
 namespace DefensiveCoding.Demos._06_HttpClientFactory
@@ -73,6 +75,36 @@ namespace DefensiveCoding.Demos._06_HttpClientFactory
                     })
                 .AddResiliencyPolicies(out var circuitBreakerPointer, "Default!");
             await VerifyResiliencyPolicies(services, circuitBreakerPointer);
+        }
+
+        /// <summary>
+        /// Demonstrate only applying a retry policy if we are doing a get
+        /// Might be useful to prevent duplicates if request is not idempotent
+        /// Other policies can still be applied to all (not shown)
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task HttpClientFactory_OnlyApplyPolicyToGetRequests()
+        {
+            IServiceCollection services = new ServiceCollection();
+            services.AddHttpClient("CustomerService",
+                    client =>
+                    {
+                        client.BaseAddress = new Uri(DemoHelper.DemoBaseUrl);
+                        client.Timeout =
+                            TimeSpan.FromSeconds(3);
+                    })
+                .AddPolicyHandler(request =>
+                    request.Method == HttpMethod.Get
+                        ? DemoPolicyFactory.GetHttpRetryPolicy()
+                        : Policy.NoOpAsync<HttpResponseMessage>());
+            var serviceProvider = services.BuildServiceProvider();
+            var clientFactory = serviceProvider.GetService<IHttpClientFactory>();
+            var httpClient = clientFactory.CreateClient("CustomerService");
+
+            var responseMessage = await httpClient.GetAsync("api/demo/error?failures=1");
+
+            Assert.IsTrue(responseMessage.IsSuccessStatusCode);
         }
 
         // extracted this out to a seperate method since the above 2 demos are accomplishing the exact same thing
