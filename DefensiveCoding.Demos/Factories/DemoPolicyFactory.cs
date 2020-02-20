@@ -13,6 +13,7 @@ namespace DefensiveCoding.Demos.Factories
 {
     /// <summary>
     /// An example of how you might return policies using a factory
+    /// By setting WithPolicyKey, you can reference the policy that was applied by name in your logging (context.PolicyKey)
     /// Note:  For demo, a real implementation would allow for policy settings to be tweaked and customer delegates to be defined.
     /// </summary>
     internal static class DemoPolicyFactory
@@ -22,7 +23,8 @@ namespace DefensiveCoding.Demos.Factories
             return Policy
                 .HandleResult<HttpResponseMessage>(resp => !resp.IsSuccessStatusCode) // catch any bad responses, transient or not         
                 .Or<Exception>() // handle ANY exception we get back
-                .FallbackAsync((result, context, ct) => FallbackAction(result, context, ct, defaultValue), PolicyLoggingHelper.LogFallbackAsync);
+                .FallbackAsync((result, context, ct) => FallbackAction(result, context, ct, defaultValue), PolicyLoggingHelper.LogFallbackAsync)
+                .WithPolicyKey("MyFallbackPolicy");
         }
 
         public static IAsyncPolicy<HttpResponseMessage> GetHttpRetryPolicy()
@@ -30,7 +32,8 @@ namespace DefensiveCoding.Demos.Factories
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .Or<TimeoutRejectedException>() // handle timeouts as failures so they get retried, decide if this is appropriate for your use case
-                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync);
+                .RetryAsync(1, onRetryAsync: PolicyLoggingHelper.LogRetryAsync)
+                .WithPolicyKey("MyRetryPolicy");
         }
 
         public static IAsyncPolicy<HttpResponseMessage> GetHttpCircuitBreakerPolicy()
@@ -38,13 +41,15 @@ namespace DefensiveCoding.Demos.Factories
             return HttpPolicyExtensions
                 .HandleTransientHttpError()
                 .Or<TimeoutRejectedException>()
-                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
+                .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30))
+                .WithPolicyKey("MyCircuitBreakerPolicy");
         }
 
         public static IAsyncPolicy<HttpResponseMessage> GetHttpInnerTimeoutPolicy()
         {
             return Policy
-                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic); // optimistic will work well with http client factory
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(1), TimeoutStrategy.Optimistic) // optimistic will work well with http client factory
+                .WithPolicyKey("MyInnerTimeoutPolicy");
         }
 
         // demonstrate returning a mock response
@@ -76,7 +81,8 @@ namespace DefensiveCoding.Demos.Factories
                 .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
 
             var resiliencyPolicy = Policy
-                .WrapAsync(fallBackPolicy, timeoutPolicy, circuitBreakerPolicy);
+                .WrapAsync(fallBackPolicy, timeoutPolicy, circuitBreakerPolicy)
+                .WithPolicyKey("MyResiliencyPolicy");
 
             return resiliencyPolicy;
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using DefensiveCoding.Api.Helpers;
 using Microsoft.AspNetCore.Mvc;
@@ -85,6 +86,14 @@ namespace DefensiveCoding.Api.Controllers
             }
 
             return "Success!";
-        }        
+        }
+
+        // used to verify cache demo
+        [HttpGet]
+        [Route("cache")]
+        public ActionResult<string> Cache()
+        {
+            return Guid.NewGuid().ToString();
+        }
     }
 }

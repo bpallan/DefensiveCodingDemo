@@ -40,7 +40,7 @@ namespace DefensiveCoding.Demos._04_CircuitBreaker
                         response.EnsureSuccessStatusCode(); // required to throw exception that will get caught
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (policy.CircuitState == CircuitState.Open)
                     {

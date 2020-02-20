@@ -4,6 +4,7 @@ using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Interfaces;
 using DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest.Models;
 using DefensiveCoding.Demos.Factories;
+using DefensiveCoding.Demos.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Polly;
@@ -116,6 +117,12 @@ namespace DefensiveCoding.Demos._08_UnitTesting
                     Email = "test@test.com"
                 };
             }
+        }
+        
+        [TestCleanup]
+        public void Cleanup()
+        {
+            DemoHelper.Reset();
         }
     }
 }

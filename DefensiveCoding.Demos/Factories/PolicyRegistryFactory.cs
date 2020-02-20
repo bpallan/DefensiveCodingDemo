@@ -16,13 +16,15 @@ namespace DefensiveCoding.Demos.Factories
                 DemoPolicyFactory.GetHttpFallbackPolicy("Default!")
                     .WrapAsync(DemoPolicyFactory.GetHttpRetryPolicy()
                     .WrapAsync(DemoPolicyFactory.GetHttpCircuitBreakerPolicy())
-                    .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy()));
+                    .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy()))
+                    .WithPolicyKey("CustomerServicePolicy"); // nice to include for logging
 
             // does not include retry
             var productServicePolicy =
                 DemoPolicyFactory.GetHttpFallbackPolicy("Default!")
                     .WrapAsync(DemoPolicyFactory.GetHttpCircuitBreakerPolicy())
-                    .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy());
+                    .WrapAsync(DemoPolicyFactory.GetHttpInnerTimeoutPolicy())
+                    .WithPolicyKey("ProductServicePolicy");
 
             registry.Add("CustomerServicePolicy", customerServicePolicy);
             registry.Add("ProductServicePolicy", productServicePolicy);
