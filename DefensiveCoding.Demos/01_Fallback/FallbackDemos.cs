@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data.SqlClient;
 using System.Net;
 using System.Net.Http;
@@ -124,6 +125,23 @@ namespace DefensiveCoding.Demos._01_Fallback
             Assert.AreEqual("Default!", content2);
         }
 
+        /// <summary>
+        /// Demonstrates that you can catch inner and aggregate exceptions using HandleInner
+        /// In the case of aggregate, will check all inner exceptions for a match
+        /// Will also match against outer exception
+        /// </summary>
+        [TestMethod]
+        public void HandleInnerAndAggregateExceptions()
+        {
+            var fallBackPolicy = Policy<string>
+                .HandleInner<NotSupportedException>()
+                .Fallback("Fallback!");
+
+            var result = fallBackPolicy.Execute(ThrowAggregateException);
+
+            Assert.AreEqual("Fallback!", result);
+        }
+
         // demonstrate returning a mock response
         private Task<HttpResponseMessage> FallbackAction(DelegateResult<HttpResponseMessage> responseToFailedRequest, Context context, CancellationToken cancellationToken)
         {
@@ -148,6 +166,15 @@ namespace DefensiveCoding.Demos._01_Fallback
             {
                 Number = 1205
             };
+        }
+
+        private string ThrowAggregateException()
+        {
+            throw new AggregateException(new List<Exception>()
+            {
+                new NotImplementedException(),
+                new NotSupportedException()
+            });
         }
         
         private class TestException : Exception
