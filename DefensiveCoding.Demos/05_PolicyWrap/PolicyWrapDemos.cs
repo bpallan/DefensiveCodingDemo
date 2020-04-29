@@ -62,7 +62,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             // The outer timeout is the most important for requests with callers waiting
             // Sometimes you might want an inner timeout slightly lower than the outer just so the circuit breaker will break on too many timeouts
             IAsyncPolicy<HttpResponseMessage> innerTimeoutPolicy = Policy
-                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Pessimistic, onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync);  // had to set to pessimistic to get this to work, todo: figure out why
+                .TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(3), TimeoutStrategy.Optimistic, onTimeoutAsync: PolicyLoggingHelper.LogTimeoutAsync); 
 
             ///////////////////////// POLICY WRAP /////////////////////////
             // wrap policies from outer to inner
@@ -85,24 +85,24 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
                 .WrapAsync(commonResiliencyPolicy);
 
             // verify retry on error
-            var response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1"), new Context($"{nameof(AddResiliencyToHttpCall)}_1"));
+            var response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx, ct) => DemoHelper.DemoClient.GetAsync("api/demo/error?failures=1", ct), new Context($"{nameof(AddResiliencyToHttpCall)}_1"), CancellationToken.None);
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify retry on client timeout           
-            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_2"));
+            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx, ct) => DemoHelper.DemoClient.GetAsync("api/demo/slow?failures=1", ct), new Context($"{nameof(AddResiliencyToHttpCall)}_2"), CancellationToken.None);
             Assert.IsTrue(response.IsSuccessStatusCode);
 
             // verify default if every call times out
             DemoHelper.Reset();
-            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/slow", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_3")); 
+            response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx, ct) => DemoHelper.DemoClient.GetAsync("api/demo/slow", ct), new Context($"{nameof(AddResiliencyToHttpCall)}_3"), CancellationToken.None); 
             var result = await response.Content.ReadAsStringAsync();
             Assert.AreEqual("Default!", result);
 
             // verify circuit broken on errors    
             for (int i = 0; i < 6; i++)
             {
-                response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx) =>
-                    DemoHelper.DemoClient.GetAsync("api/demo/error", CancellationToken.None), new Context($"{nameof(AddResiliencyToHttpCall)}_4"));
+                response = await resiliencyPolicyWithFallback.ExecuteAsync((ctx, ct) =>
+                    DemoHelper.DemoClient.GetAsync("api/demo/error", ct), new Context($"{nameof(AddResiliencyToHttpCall)}_4"), CancellationToken.None);
                 result = await response.Content.ReadAsStringAsync();
                 Assert.AreEqual("Default!", result);
             }
@@ -114,7 +114,7 @@ namespace DefensiveCoding.Demos._05_PolicyWrap
             Assert.AreEqual(CircuitState.HalfOpen, circuitBreaker.CircuitState);
 
             // verify circuit breaker is back open
-            await commonResiliencyPolicy.ExecuteAsync((ctx) => DemoHelper.DemoClient.GetAsync("api/demo/success"), new Context($"{nameof(AddResiliencyToHttpCall)}_5"));
+            await commonResiliencyPolicy.ExecuteAsync((ctx, ct) => DemoHelper.DemoClient.GetAsync("api/demo/success", ct), new Context($"{nameof(AddResiliencyToHttpCall)}_5"), CancellationToken.None);
             Assert.AreEqual(CircuitState.Closed, circuitBreaker.CircuitState);
         }        
 
