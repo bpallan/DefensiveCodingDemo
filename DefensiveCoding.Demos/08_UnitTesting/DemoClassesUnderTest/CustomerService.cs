@@ -9,11 +9,11 @@ namespace DefensiveCoding.Demos._08_UnitTesting.DemoClassesUnderTest
     /// Demo proxy class into another service.  Used to show how to unit test classes that dependen on HttpClientFactory
     /// Note:  This class is demowhare and doesn't virtually nothing.  Unit testing isn't very valuable for this but pretend it does a bunch of complex stuff.
     /// </summary>
-    internal class CustomerService_ClientFactory
+    internal class CustomerService
     {
         private readonly IHttpClientFactory _clientFactory;
 
-        public CustomerService_ClientFactory(IHttpClientFactory clientFactory)
+        public CustomerService(IHttpClientFactory clientFactory)
         {
             _clientFactory = clientFactory;
         }

@@ -39,7 +39,7 @@ namespace DefensiveCoding.Demos._08_UnitTesting
                     {
                         BaseAddress = new Uri("http://localhost")
                     });
-            var classUnderTest = new CustomerService_ClientFactory(mockClientFactory.Object);
+            var classUnderTest = new CustomerService(mockClientFactory.Object);
 
             // act
             var customer = await classUnderTest.GetCustomerByIdAsync(1);
@@ -99,9 +99,9 @@ namespace DefensiveCoding.Demos._08_UnitTesting
             services.AddHttpClient("CustomerService", client => client.BaseAddress = new Uri("http://localhost/"))
                 .AddResiliencyPolicies(out var circuitBreaker, JsonConvert.SerializeObject(GetDefaultCustomer()))
                 .AddHttpMessageHandler(() => mockHandler);
-            services.AddTransient<CustomerService_ClientFactory>();
+            services.AddTransient<CustomerService>();
             var serviceProvider = services.BuildServiceProvider();
-            var classUnderTest = serviceProvider.GetService<CustomerService_ClientFactory>();
+            var classUnderTest = serviceProvider.GetService<CustomerService>();
 
             // act
             var customer = await classUnderTest.GetCustomerByIdAsync(1);
