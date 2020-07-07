@@ -94,9 +94,9 @@ namespace PollyLab
             var verifyResponse = await verifyClient.GetAsync("api/lab/customers");
             var json = await verifyResponse.Content.ReadAsStringAsync();
             var savedCustomerList = JsonConvert.DeserializeObject<List<Customer>>(json);
-            Assert.AreEqual(0, _customerQueue.Count);
-            Assert.AreEqual(100, savedCustomerList.Select(x => x.CustomerId).Distinct().Count());
-            Assert.IsTrue(sw.ElapsedMilliseconds < 60000);
+            Assert.AreEqual(0, _customerQueue.Count, "There are still customers left in the queue.");
+            Assert.AreEqual(100, savedCustomerList.Select(x => x.CustomerId).Distinct().Count(), "Not all customers were saved.");
+            Assert.IsTrue(sw.ElapsedMilliseconds < 60000, "The test timed out.");
         }
 
         public VerifyLab()
